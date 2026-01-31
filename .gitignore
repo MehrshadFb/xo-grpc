@@ -1,0 +1,4 @@
+gen/go/
+bin/
+*.log
+.DS_Store
