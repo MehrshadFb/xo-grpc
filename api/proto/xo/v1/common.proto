@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package xo.v1;
+option go_package = "github.com/MehrshadFb/xo-grpc/gen/go/xo/v1;v1";
+
+enum Mark {
+  MARK_UNSPECIFIED = 0;
+  MARK_EMPTY = 1;
+  MARK_X = 2;
+  MARK_O = 3;
+}
+
+enum GameStatus {
+  GAME_STATUS_UNSPECIFIED = 0;
+  GAME_STATUS_WAITING = 1; // created, waiting for 2nd player
+  GAME_STATUS_IN_PROGRESS = 2; // two players, turns happening
+  GAME_STATUS_FINISHED = 3; // win or draw
+  GAME_STATUS_ABORTED = 4; // resign/timeout
+}
+
+enum GameOverReason {
+  GAME_OVER_REASON_UNSPECIFIED = 0;
+  GAME_OVER_REASON_WIN = 1;
+  GAME_OVER_REASON_DRAW = 2;
+  GAME_OVER_REASON_RESIGN = 3;
+  GAME_OVER_REASON_TIMEOUT = 4;
+}
+
+message Player {
+  string player_id = 1;
+  string display_name = 2;
+  Mark mark = 3; // X or O
+}
+
+message Move {
+  int32 cell_index = 1; // 0..8
+  Mark mark = 2; // X or O
+  int64 move_number = 3; // increments each move
+  string player_id = 4;
+}
+
+message GameState {
+  string game_id = 1;
+  string join_code = 2;
+  GameStatus status = 3;
+  repeated Mark board = 4; // exactly 9 cells, row-major: 0..8
+  Player player_x = 5; // may be unset while waiting? (but usually set)
+  Player player_o = 6; // unset until second player joins
+  Mark next_turn = 7; // X or O when IN_PROGRESS
+  Mark winner = 8; // X, O, or EMPTY when none
+  bool is_draw = 9;
+  int64 version = 10; // increments every state change
+}

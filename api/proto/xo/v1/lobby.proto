@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package xo.v1;
+option go_package = "github.com/MehrshadFb/xo-grpc/gen/go/xo/v1;v1";
+
+import "xo/v1/common.proto";
+
+service LobbyService {
+  rpc CreateGame(CreateGameRequest) returns (CreateGameResponse);
+  rpc JoinGame(JoinGameRequest) returns (JoinGameResponse);
+}
+
+message CreateGameRequest {
+  string display_name = 1;
+}
+
+message CreateGameResponse {
+  GameState state = 1;
+  string player_token = 2; // token proves "you are player X for this game"
+}
+
+message JoinGameRequest {
+  string join_code = 1;
+  string display_name = 2;
+}
+
+message JoinGameResponse {
+  GameState state = 1;
+  string player_token = 2; // token proves "you are player O for this game"
+}

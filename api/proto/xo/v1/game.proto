@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package xo.v1;
+option go_package = "github.com/MehrshadFb/xo-grpc/gen/go/xo/v1;v1";
+
+import "xo/v1/common.proto";
+
+service GameService {
+  rpc GetState(GetStateRequest) returns (GetStateResponse);
+  rpc MakeMove(MakeMoveRequest) returns (MakeMoveResponse);
+  rpc WatchGame(WatchGameRequest) returns (stream GameEvent);
+}
+
+message GetStateRequest {
+  string game_id = 1;
+  string player_token = 2;
+}
+
+message GetStateResponse {
+  GameState state = 1;
+}
+
+message MakeMoveRequest {
+  string game_id = 1;
+  string player_token = 2;
+  int32 cell_index = 3; // 0..8
+}
+
+message MakeMoveResponse {
+  GameState state = 1;
+}
+
+enum GameEventType {
+  GAME_EVENT_TYPE_UNSPECIFIED = 0;
+  GAME_EVENT_TYPE_STATE_SNAPSHOT = 1; // first event on stream
+  GAME_EVENT_TYPE_PLAYER_JOINED = 2;
+  GAME_EVENT_TYPE_MOVE_MADE = 3;
+  GAME_EVENT_TYPE_GAME_OVER = 4;
+  GAME_EVENT_TYPE_PLAYER_LEFT = 5; // due to resign or timeout
+}
+
+message GameEvent {
+  GameEventType type = 1;
+  int64 event_id = 2; // monotonic per game (or reuse state.version)
+  GameState state = 3; // always include full state (easy clients)
+  Move move = 4; // present on MOVE_MADE
+  GameOverReason game_over_reason = 5; // present on GAME_OVER
+  string message = 6; // human-readable info
+}
+
+message WatchGameRequest {
+  string game_id = 1;
+  string player_token = 2;
+}
