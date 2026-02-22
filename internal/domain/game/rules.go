@@ -9,6 +9,9 @@ func (g *Game) Start() error {
 		// Already started - treat as no-op for simplicity
 		return nil
 	}
+	if g.PlayerO == nil {
+		return ErrPlayerOMissing
+	}
 
 	g.Status = StatusInProgress
 	g.NextTurn = MarkX // X always starts

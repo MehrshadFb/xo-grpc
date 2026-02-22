@@ -1,5 +1,11 @@
 package game
 
+type Player struct {
+	ID          string
+	DisplayName string
+	Mark        Mark // X or O
+}
+
 type Mark int
 const (
 	MarkUnspecified Mark = iota
@@ -27,4 +33,6 @@ type Game struct {
 	IsDraw bool
 	MoveNumber int64
 	Version    int64
+	PlayerX *Player
+	PlayerO *Player
 }

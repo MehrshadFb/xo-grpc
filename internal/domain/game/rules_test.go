@@ -23,6 +23,7 @@ func TestNewGame_InitialState(t *testing.T) {
 
 func TestStart_TransitionsToInProgress(t *testing.T) {
 	g := NewGame("g1", "CODE")
+	g.SetPlayerO("p2", "bob")
 
 	if err := g.Start(); err != nil {
 		t.Fatalf("Start() unexpected error: %v", err)
@@ -41,6 +42,7 @@ func TestStart_TransitionsToInProgress(t *testing.T) {
 
 func TestApplyMove_BasicTurnFlow(t *testing.T) {
 	g := NewGame("g1", "CODE")
+	g.SetPlayerO("p2", "bob")
 	_ = g.Start()
 
 	// X plays center
@@ -74,6 +76,7 @@ func TestApplyMove_BasicTurnFlow(t *testing.T) {
 
 func TestApplyMove_InvalidCellIndex(t *testing.T) {
 	g := NewGame("g1", "CODE")
+	g.SetPlayerO("p2", "bob")
 	_ = g.Start()
 
 	if err := g.ApplyMove(MarkX, -1); err != ErrInvalidCellIndex {
@@ -86,6 +89,7 @@ func TestApplyMove_InvalidCellIndex(t *testing.T) {
 
 func TestApplyMove_CellOccupied(t *testing.T) {
 	g := NewGame("g1", "CODE")
+	g.SetPlayerO("p2", "bob")
 	_ = g.Start()
 
 	if err := g.ApplyMove(MarkX, 1); err != nil {
@@ -98,6 +102,7 @@ func TestApplyMove_CellOccupied(t *testing.T) {
 
 func TestApplyMove_WrongTurn(t *testing.T) {
 	g := NewGame("g1", "CODE")
+	g.SetPlayerO("p2", "bob")
 	_ = g.Start()
 
 	// X's turn first; O tries to play
@@ -117,6 +122,7 @@ func TestApplyMove_GameNotInProgress(t *testing.T) {
 
 func TestApplyMove_XWinsTopRow(t *testing.T) {
 	g := NewGame("g1", "CODE")
+	g.SetPlayerO("p2", "bob")
 	_ = g.Start()
 
 	// X:0, O:3, X:1, O:4, X:2 => X wins
@@ -150,6 +156,7 @@ func TestApplyMove_XWinsTopRow(t *testing.T) {
 
 func TestApplyMove_Draw(t *testing.T) {
 	g := NewGame("g1", "CODE")
+	g.SetPlayerO("p2", "bob")
 	_ = g.Start()
 
 	// A known draw sequence (no 3-in-a-row):
@@ -190,6 +197,7 @@ func TestApplyMove_Draw(t *testing.T) {
 
 func TestApplyMove_NoMovesAfterFinished(t *testing.T) {
 	g := NewGame("g1", "CODE")
+	g.SetPlayerO("p2", "bob")
 	_ = g.Start()
 
 	// Force a quick win for X

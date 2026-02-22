@@ -9,4 +9,5 @@ var (
 	ErrGameFinished = errors.New("game already finished")
 	ErrInvalidPlayerMark = errors.New("invalid player mark")
 	ErrNotPlayersTurn = errors.New("not player's turn")
+	ErrPlayerOMissing = errors.New("player O is missing")
 )

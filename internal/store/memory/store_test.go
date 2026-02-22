@@ -94,6 +94,7 @@ func TestStore_Update(t *testing.T) {
 	}
 
 	// Mutate the game and update
+	g.SetPlayerO("p2", "bob")
 	_ = g.Start()
 	if err := s.Update(g); err != nil {
 		t.Fatalf("Update() unexpected error: %v", err)
