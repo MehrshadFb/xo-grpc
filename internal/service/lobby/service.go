@@ -1,7 +1,6 @@
 package lobby
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/MehrshadFb/xo-grpc/internal/domain/game"
@@ -24,7 +23,7 @@ func NewService(store *memory.Store, sessions *session.Manager) *Service {
 func (s *Service) CreateGame(displayName string) (*CreateGameResult, error) {
 	displayName = strings.TrimSpace(displayName)
 	if displayName == "" {
-		return nil, errors.New("display name is required")
+		return nil, ErrEmptyDisplayName
 	}
 
 	// 1) Generate IDs
@@ -61,6 +60,59 @@ func (s *Service) CreateGame(displayName string) (*CreateGameResult, error) {
 	}
 
 	return &CreateGameResult{
+		Game:        g,
+		PlayerToken: token,
+		PlayerID:    playerID,
+	}, nil
+}
+
+func (s *Service) JoinGame(joinCode, displayName string) (*JoinGameResult, error) {
+	joinCode = strings.TrimSpace(joinCode)
+	displayName = strings.TrimSpace(displayName)
+
+	if displayName == "" {
+		return nil, ErrEmptyDisplayName
+	}
+	if joinCode == "" {
+		return nil, ErrInvalidJoinCode
+	}
+
+	g, err := s.store.GetByJoinCode(joinCode)
+	if err != nil {
+		if err == memory.ErrJoinCodeNotFound {
+			return nil, ErrInvalidJoinCode
+		}
+		return nil, err
+	}
+
+	if g.Status != game.StatusWaiting {
+		return nil, ErrGameNotWaiting
+	}
+	if g.PlayerO != nil {
+		return nil, ErrGameFull
+	}
+
+	playerID, err := newPlayerID()
+	if err != nil {
+		return nil, err
+	}
+
+	g.SetPlayerO(playerID, displayName)
+
+	if err := g.Start(); err != nil {
+		return nil, err
+	}
+
+	if err := s.store.Update(g); err != nil {
+		return nil, err
+	}
+
+	token, err := s.sessions.Create(g.ID, playerID, game.MarkO)
+	if err != nil {
+		return nil, err
+	}
+
+	return &JoinGameResult{
 		Game:        g,
 		PlayerToken: token,
 		PlayerID:    playerID,
