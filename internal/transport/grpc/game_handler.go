@@ -6,6 +6,7 @@ import (
 
 	xov1 "github.com/MehrshadFb/xo-grpc/gen/go/xo/v1"
 	domaingame "github.com/MehrshadFb/xo-grpc/internal/domain/game"
+	"github.com/MehrshadFb/xo-grpc/internal/realtime"
 	gamesvc "github.com/MehrshadFb/xo-grpc/internal/service/game"
 	"github.com/MehrshadFb/xo-grpc/internal/service/session"
 	"github.com/MehrshadFb/xo-grpc/internal/store/memory"
@@ -17,11 +18,13 @@ type GameHandler struct {
 	xov1.UnimplementedGameServiceServer
 
 	service *gamesvc.Service
+	hub     *realtime.Hub
 }
 
-func NewGameHandler(service *gamesvc.Service) *GameHandler {
+func NewGameHandler(service *gamesvc.Service, hub *realtime.Hub) *GameHandler {
 	return &GameHandler{
 		service: service,
+		hub:     hub,
 	}
 }
 
@@ -49,6 +52,50 @@ func (h *GameHandler) MakeMove(ctx context.Context, req *xov1.MakeMoveRequest) (
 	return &xov1.MakeMoveResponse{
 		State: toProtoGameState(result.Game),
 	}, nil
+}
+
+func (h *GameHandler) WatchGame(req *xov1.WatchGameRequest, stream xov1.GameService_WatchGameServer) error {
+	if h.hub == nil {
+		return status.Error(codes.Internal, "realtime hub is not configured")
+	}
+	
+	result, err := h.service.GetState(req.GetGameId(), req.GetPlayerToken())
+	if err != nil {
+		return gameError(err)
+	}
+
+	if err := stream.Send(&xov1.GameEvent{
+		Type:    xov1.GameEventType_GAME_EVENT_TYPE_STATE_SNAPSHOT,
+		EventId: result.Game.Version,
+		State:   toProtoGameState(result.Game),
+		Message: "initial game state",
+	}); err != nil {
+		return err
+	}
+
+	sub := h.hub.Subscribe(req.GetGameId()) // dedicated a private channel for this client to watch this game
+	defer h.hub.Unsubscribe(req.GetGameId(), sub) // unsubscribe when the client disconnects
+
+	for {
+		select {
+		case <-stream.Context().Done(): // client context is done = client disconnected
+			return stream.Context().Err()
+
+		case g, ok := <-sub: // receive game state updates from the realtime hub
+			if !ok {
+				return nil
+			}
+
+			if err := stream.Send(&xov1.GameEvent{
+				Type:    xov1.GameEventType_GAME_EVENT_TYPE_MOVE_MADE,
+				EventId: g.Version,
+				State:   toProtoGameState(g),
+				Message: "game state updated",
+			}); err != nil {
+				return err
+			}
+		}
+	}
 }
 
 func gameError(err error) error {

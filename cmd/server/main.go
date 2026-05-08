@@ -28,7 +28,7 @@ func main() {
 
 	// gRPC handlers
 	lobbyHandler := transportgrpc.NewLobbyHandler(lobbyService)
-	gameHandler := transportgrpc.NewGameHandler(gameService)
+	gameHandler := transportgrpc.NewGameHandler(gameService, hub)
 
 	// gRPC server
 	grpcServer := grpc.NewServer()
