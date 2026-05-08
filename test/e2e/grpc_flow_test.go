@@ -71,15 +71,41 @@ func TestCreateJoinMoveAndWatchGame(t *testing.T) {
 		t.Fatalf("CreateGame: %v", err)
 	}
 
-	if createResp.GetState().GetGameId() == "" {
+	gameID := createResp.GetState().GetGameId()
+	aliceToken := createResp.GetPlayerToken()
+	joinCode := createResp.GetState().GetJoinCode()
+
+	if gameID == "" {
 		t.Fatalf("expected game id")
 	}
-	if createResp.GetPlayerToken() == "" {
+	if aliceToken == "" {
 		t.Fatalf("expected Alice token")
+	}
+	if joinCode == "" {
+		t.Fatalf("expected join code")
+	}
+
+	stream, err := gameClient.WatchGame(ctx, &xov1.WatchGameRequest{
+		GameId:      gameID,
+		PlayerToken: aliceToken,
+	})
+	if err != nil {
+		t.Fatalf("WatchGame: %v", err)
+	}
+
+	snapshot, err := stream.Recv()
+	if err != nil {
+		t.Fatalf("WatchGame snapshot recv: %v", err)
+	}
+	if snapshot.GetType() != xov1.GameEventType_GAME_EVENT_TYPE_STATE_SNAPSHOT {
+		t.Fatalf("expected snapshot event, got %v", snapshot.GetType())
+	}
+	if snapshot.GetState().GetStatus() != xov1.GameStatus_GAME_STATUS_WAITING {
+		t.Fatalf("expected waiting snapshot, got %v", snapshot.GetState().GetStatus())
 	}
 
 	joinResp, err := lobbyClient.JoinGame(ctx, &xov1.JoinGameRequest{
-		JoinCode:    createResp.GetState().GetJoinCode(),
+		JoinCode:    joinCode,
 		DisplayName: "Bob",
 	})
 	if err != nil {
@@ -93,26 +119,23 @@ func TestCreateJoinMoveAndWatchGame(t *testing.T) {
 		t.Fatalf("expected game in progress, got %v", joinResp.GetState().GetStatus())
 	}
 
-	stream, err := gameClient.WatchGame(ctx, &xov1.WatchGameRequest{
-		GameId:      createResp.GetState().GetGameId(),
-		PlayerToken: createResp.GetPlayerToken(),
-	})
+	playerJoinedEvent, err := stream.Recv()
 	if err != nil {
-		t.Fatalf("WatchGame: %v", err)
+		t.Fatalf("WatchGame player joined recv: %v", err)
 	}
-
-	snapshot, err := stream.Recv()
-	if err != nil {
-		t.Fatalf("WatchGame snapshot recv: %v", err)
+	if playerJoinedEvent.GetType() != xov1.GameEventType_GAME_EVENT_TYPE_PLAYER_JOINED {
+		t.Fatalf("expected player joined event, got %v", playerJoinedEvent.GetType())
 	}
-
-	if snapshot.GetType() != xov1.GameEventType_GAME_EVENT_TYPE_STATE_SNAPSHOT {
-		t.Fatalf("expected snapshot event, got %v", snapshot.GetType())
+	if playerJoinedEvent.GetState().GetPlayerO().GetDisplayName() != "Bob" {
+		t.Fatalf("expected PlayerO Bob, got %q", playerJoinedEvent.GetState().GetPlayerO().GetDisplayName())
+	}
+	if playerJoinedEvent.GetState().GetStatus() != xov1.GameStatus_GAME_STATUS_IN_PROGRESS {
+		t.Fatalf("expected in progress after join, got %v", playerJoinedEvent.GetState().GetStatus())
 	}
 
 	moveResp, err := gameClient.MakeMove(ctx, &xov1.MakeMoveRequest{
-		GameId:      createResp.GetState().GetGameId(),
-		PlayerToken: createResp.GetPlayerToken(),
+		GameId:      gameID,
+		PlayerToken: aliceToken,
 		CellIndex:   4,
 	})
 	if err != nil {
@@ -123,18 +146,17 @@ func TestCreateJoinMoveAndWatchGame(t *testing.T) {
 		t.Fatalf("expected cell 4 to be X, got %v", moveResp.GetState().GetBoard()[4])
 	}
 
-	event, err := stream.Recv()
+	moveEvent, err := stream.Recv()
 	if err != nil {
 		t.Fatalf("WatchGame move event recv: %v", err)
 	}
-
-	if event.GetType() != xov1.GameEventType_GAME_EVENT_TYPE_MOVE_MADE {
-		t.Fatalf("expected move made event, got %v", event.GetType())
+	if moveEvent.GetType() != xov1.GameEventType_GAME_EVENT_TYPE_MOVE_MADE {
+		t.Fatalf("expected move made event, got %v", moveEvent.GetType())
 	}
-	if event.GetState().GetBoard()[4] != xov1.Mark_MARK_X {
-		t.Fatalf("expected streamed cell 4 to be X, got %v", event.GetState().GetBoard()[4])
+	if moveEvent.GetState().GetBoard()[4] != xov1.Mark_MARK_X {
+		t.Fatalf("expected streamed cell 4 to be X, got %v", moveEvent.GetState().GetBoard()[4])
 	}
-	if event.GetState().GetNextTurn() != xov1.Mark_MARK_O {
-		t.Fatalf("expected next turn O, got %v", event.GetState().GetNextTurn())
+	if moveEvent.GetState().GetNextTurn() != xov1.Mark_MARK_O {
+		t.Fatalf("expected next turn O, got %v", moveEvent.GetState().GetNextTurn())
 	}
 }
