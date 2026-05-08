@@ -3,6 +3,9 @@ package main
 import (
 	"log"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 
 	xov1 "github.com/MehrshadFb/xo-grpc/gen/go/xo/v1"
 	"github.com/MehrshadFb/xo-grpc/internal/realtime"
@@ -44,9 +47,29 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	log.Println("gRPC server listening on :50051")
+	serverErr := make(chan error, 1) // channel to receive server errors
 
-	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+	// start the server in a goroutine
+	go func() {
+		log.Println("gRPC server listening on :50051")
+		serverErr <- grpcServer.Serve(lis)
+	}()
+
+	shutdown := make(chan os.Signal, 1) // channel to receive shutdown signals
+	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM) // notify when SIGINT or SIGTERM is received
+
+	select {
+	case err := <-serverErr: // receive server error
+		if err != nil {
+			log.Fatalf("failed to serve: %v", err)
+		}
+
+	case sig := <-shutdown: // receive shutdown signal
+		log.Printf("received shutdown signal: %s", sig)
+		log.Println("gracefully stopping gRPC server")
+
+		grpcServer.GracefulStop() // gracefully stop the server
+
+		log.Println("server stopped")
 	}
 }
