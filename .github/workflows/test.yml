@@ -41,6 +41,6 @@ jobs:
       - name: Generate protobuf code
         run: make proto
 
-      # run the tests
-      - name: Run tests
-        run: go test ./...
+      # run all tests with race detector (including e2e tests)
+      - name: Run tests with race detector
+        run: go test -race ./...
