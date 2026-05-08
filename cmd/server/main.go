@@ -5,6 +5,7 @@ import (
 	"net"
 
 	xov1 "github.com/MehrshadFb/xo-grpc/gen/go/xo/v1"
+	"github.com/MehrshadFb/xo-grpc/internal/realtime"
 	gamesvc "github.com/MehrshadFb/xo-grpc/internal/service/game"
 	"github.com/MehrshadFb/xo-grpc/internal/service/lobby"
 	"github.com/MehrshadFb/xo-grpc/internal/service/session"
@@ -19,10 +20,11 @@ func main() {
 	// Infrastructure
 	store := memory.NewStore()
 	sessions := session.NewManager()
+	hub := realtime.NewHub()
 
 	// Services
 	lobbyService := lobby.NewService(store, sessions)
-	gameService := gamesvc.NewService(store, sessions)
+	gameService := gamesvc.NewService(store, sessions, hub)
 
 	// gRPC handlers
 	lobbyHandler := transportgrpc.NewLobbyHandler(lobbyService)

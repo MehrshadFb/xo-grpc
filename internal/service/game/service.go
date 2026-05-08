@@ -3,6 +3,7 @@ package gamesvc
 import (
 	"strings"
 
+	"github.com/MehrshadFb/xo-grpc/internal/realtime"
 	"github.com/MehrshadFb/xo-grpc/internal/service/session"
 	"github.com/MehrshadFb/xo-grpc/internal/store/memory"
 )
@@ -10,12 +11,14 @@ import (
 type Service struct {
 	store    *memory.Store
 	sessions *session.Manager
+	hub      *realtime.Hub
 }
 
-func NewService(store *memory.Store, sessions *session.Manager) *Service {
+func NewService(store *memory.Store, sessions *session.Manager, hub *realtime.Hub) *Service {
 	return &Service{
 		store:    store,
 		sessions: sessions,
+		hub:      hub,
 	}
 }
 
@@ -69,6 +72,11 @@ func (s *Service) MakeMove(gameID, playerToken string, cellIndex int) (*MakeMove
 
 	if err := s.store.Update(g); err != nil {
 		return nil, err
+	}
+
+	// publish game state update to realtime hub
+	if s.hub != nil {
+		s.hub.Publish(g.ID, g)
 	}
 
 	return &MakeMoveResult{Game: g}, nil
