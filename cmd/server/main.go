@@ -23,7 +23,7 @@ func main() {
 	hub := realtime.NewHub()
 
 	// Services
-	lobbyService := lobby.NewService(store, sessions)
+	lobbyService := lobby.NewService(store, sessions, hub)
 	gameService := gamesvc.NewService(store, sessions, hub)
 
 	// gRPC handlers

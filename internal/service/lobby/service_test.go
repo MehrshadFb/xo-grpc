@@ -12,7 +12,7 @@ func TestCreateGame(t *testing.T) {
 	store := memory.NewStore()
 	sessions := session.NewManager()
 
-	service := NewService(store, sessions)
+	service := NewService(store, sessions, nil)
 
 	result, err := service.CreateGame("Alice")
 	if err != nil {
@@ -57,7 +57,7 @@ func TestCreateGame(t *testing.T) {
 func TestJoinGame(t *testing.T) {
 	store := memory.NewStore()
 	sessions := session.NewManager()
-	service := NewService(store, sessions)
+	service := NewService(store, sessions, nil)
 
 	created, err := service.CreateGame("Alice")
 	if err != nil {
@@ -100,7 +100,7 @@ func TestJoinGame(t *testing.T) {
 func TestJoinGame_InvalidJoinCode(t *testing.T) {
 	store := memory.NewStore()
 	sessions := session.NewManager()
-	service := NewService(store, sessions)
+	service := NewService(store, sessions, nil)
 
 	_, err := service.JoinGame("NOPE", "Bob")
 	if err != ErrInvalidJoinCode {
@@ -111,7 +111,7 @@ func TestJoinGame_InvalidJoinCode(t *testing.T) {
 func TestJoinGame_GameAlreadyFull(t *testing.T) {
 	store := memory.NewStore()
 	sessions := session.NewManager()
-	service := NewService(store, sessions)
+	service := NewService(store, sessions, nil)
 
 	created, err := service.CreateGame("Alice")
 	if err != nil {
@@ -132,7 +132,7 @@ func TestJoinGame_GameAlreadyFull(t *testing.T) {
 func TestJoinGame_EmptyDisplayName(t *testing.T) {
 	store := memory.NewStore()
 	sessions := session.NewManager()
-	service := NewService(store, sessions)
+	service := NewService(store, sessions, nil)
 
 	created, err := service.CreateGame("Alice")
 	if err != nil {

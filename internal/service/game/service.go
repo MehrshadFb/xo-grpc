@@ -3,6 +3,7 @@ package gamesvc
 import (
 	"strings"
 
+	domaingame "github.com/MehrshadFb/xo-grpc/internal/domain/game"
 	"github.com/MehrshadFb/xo-grpc/internal/realtime"
 	"github.com/MehrshadFb/xo-grpc/internal/service/session"
 	"github.com/MehrshadFb/xo-grpc/internal/store/memory"
@@ -74,9 +75,24 @@ func (s *Service) MakeMove(gameID, playerToken string, cellIndex int) (*MakeMove
 		return nil, err
 	}
 
-	// publish game state update to realtime hub
 	if s.hub != nil {
-		s.hub.Publish(g.ID, g)
+		eventType := realtime.EventTypeMoveMade
+		gameOverReason := ""
+
+		if g.Status == domaingame.StatusFinished {
+			eventType = realtime.EventTypeGameOver
+			if g.IsDraw {
+				gameOverReason = "draw"
+			} else {
+				gameOverReason = "win"
+			}
+		}
+
+		s.hub.Publish(g.ID, realtime.Event{
+			Type:           eventType,
+			Game:           g,
+			GameOverReason: gameOverReason,
+		})
 	}
 
 	return &MakeMoveResult{Game: g}, nil

@@ -15,7 +15,7 @@ func setupStartedGame(t *testing.T) (*Service, *lobby.CreateGameResult, *lobby.J
 	store := memory.NewStore()
 	sessions := session.NewManager()
 
-	lobbySvc := lobby.NewService(store, sessions)
+	lobbySvc := lobby.NewService(store, sessions, nil)
 	gameSvc := NewService(store, sessions, nil)
 
 	created, err := lobbySvc.CreateGame("Alice")

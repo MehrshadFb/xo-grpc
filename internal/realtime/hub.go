@@ -6,8 +6,6 @@ package realtime
 
 import (
 	"sync"
-
-	domaingame "github.com/MehrshadFb/xo-grpc/internal/domain/game"
 )
 
 type Hub struct {
@@ -57,7 +55,7 @@ func (h *Hub) Unsubscribe(gameID string, sub Subscriber) {
 	}
 }
 
-func (h *Hub) Publish(gameID string, g *domaingame.Game) {
+func (h *Hub) Publish(gameID string, event Event) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
@@ -68,7 +66,7 @@ func (h *Hub) Publish(gameID string, g *domaingame.Game) {
 
 	for sub := range subs {
 		select {
-		case sub <- g:
+		case sub <- event:
 		default:
 			// skip slow subscriber
 		}

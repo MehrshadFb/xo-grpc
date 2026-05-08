@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/MehrshadFb/xo-grpc/internal/domain/game"
+	"github.com/MehrshadFb/xo-grpc/internal/realtime"
 	"github.com/MehrshadFb/xo-grpc/internal/service/session"
 	"github.com/MehrshadFb/xo-grpc/internal/store/memory"
 )
@@ -11,12 +12,14 @@ import (
 type Service struct {
 	store    *memory.Store
 	sessions *session.Manager
+	hub      *realtime.Hub
 }
 
-func NewService(store *memory.Store, sessions *session.Manager) *Service {
+func NewService(store *memory.Store, sessions *session.Manager, hub *realtime.Hub) *Service {
 	return &Service{
 		store:    store,
 		sessions: sessions,
+		hub:      hub,
 	}
 }
 
@@ -105,6 +108,13 @@ func (s *Service) JoinGame(joinCode, displayName string) (*JoinGameResult, error
 
 	if err := s.store.Update(g); err != nil {
 		return nil, err
+	}
+	
+	if s.hub != nil {
+		s.hub.Publish(g.ID, realtime.Event{
+			Type: realtime.EventTypePlayerJoined,
+			Game: g,
+		})
 	}
 
 	token, err := s.sessions.Create(g.ID, playerID, game.MarkO)

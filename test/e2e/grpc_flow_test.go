@@ -29,7 +29,7 @@ func startTestServer(t *testing.T) string {
 	sessions := session.NewManager()
 	hub := realtime.NewHub()
 
-	lobbySvc := lobby.NewService(store, sessions)
+	lobbySvc := lobby.NewService(store, sessions, hub)
 	gameSvc := gamesvc.NewService(store, sessions, hub)
 
 	server := grpc.NewServer()

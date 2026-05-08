@@ -3,6 +3,7 @@ package grpc
 import (
 	xov1 "github.com/MehrshadFb/xo-grpc/gen/go/xo/v1"
 	domaingame "github.com/MehrshadFb/xo-grpc/internal/domain/game"
+	"github.com/MehrshadFb/xo-grpc/internal/realtime"
 )
 
 func toProtoGameState(g *domaingame.Game) *xov1.GameState {
@@ -68,5 +69,29 @@ func toProtoStatus(status domaingame.GameStatus) xov1.GameStatus {
 		return xov1.GameStatus_GAME_STATUS_ABORTED
 	default:
 		return xov1.GameStatus_GAME_STATUS_UNSPECIFIED
+	}
+}
+
+func toProtoEventType(t realtime.EventType) xov1.GameEventType {
+	switch t {
+	case realtime.EventTypePlayerJoined:
+		return xov1.GameEventType_GAME_EVENT_TYPE_PLAYER_JOINED
+	case realtime.EventTypeMoveMade:
+		return xov1.GameEventType_GAME_EVENT_TYPE_MOVE_MADE
+	case realtime.EventTypeGameOver:
+		return xov1.GameEventType_GAME_EVENT_TYPE_GAME_OVER
+	default:
+		return xov1.GameEventType_GAME_EVENT_TYPE_UNSPECIFIED
+	}
+}
+
+func toProtoGameOverReason(reason string) xov1.GameOverReason {
+	switch reason {
+	case "win":
+		return xov1.GameOverReason_GAME_OVER_REASON_WIN
+	case "draw":
+		return xov1.GameOverReason_GAME_OVER_REASON_DRAW
+	default:
+		return xov1.GameOverReason_GAME_OVER_REASON_UNSPECIFIED
 	}
 }

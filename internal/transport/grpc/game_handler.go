@@ -58,7 +58,7 @@ func (h *GameHandler) WatchGame(req *xov1.WatchGameRequest, stream xov1.GameServ
 	if h.hub == nil {
 		return status.Error(codes.Internal, "realtime hub is not configured")
 	}
-	
+
 	result, err := h.service.GetState(req.GetGameId(), req.GetPlayerToken())
 	if err != nil {
 		return gameError(err)
@@ -81,16 +81,17 @@ func (h *GameHandler) WatchGame(req *xov1.WatchGameRequest, stream xov1.GameServ
 		case <-stream.Context().Done(): // client context is done = client disconnected
 			return stream.Context().Err()
 
-		case g, ok := <-sub: // receive game state updates from the realtime hub
+		case event, ok := <-sub: // receive game state updates from the realtime hub
 			if !ok {
 				return nil
 			}
 
 			if err := stream.Send(&xov1.GameEvent{
-				Type:    xov1.GameEventType_GAME_EVENT_TYPE_MOVE_MADE,
-				EventId: g.Version,
-				State:   toProtoGameState(g),
-				Message: "game state updated",
+				Type:           toProtoEventType(event.Type),
+				EventId:        event.Game.Version,
+				State:          toProtoGameState(event.Game),
+				GameOverReason: toProtoGameOverReason(event.GameOverReason),
+				Message:        "game state updated",
 			}); err != nil {
 				return err
 			}
