@@ -1,0 +1,15 @@
+services:
+  xo-grpc:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: xo-grpc
+
+    ports:
+      - "50051:50051"
+
+    environment:
+      PORT: 50051
+
+    restart: unless-stopped
