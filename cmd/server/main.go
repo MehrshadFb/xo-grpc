@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 	"net"
 	"os"
 	"os/signal"
@@ -47,14 +47,15 @@ func main() {
 	// Listen
 	lis, err := net.Listen("tcp", cfg.Address())
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		slog.Error("failed to listen", "error", err)
+		os.Exit(1)
 	}
 
 	serverErr := make(chan error, 1) // channel to receive server errors
 
 	// start the server in a goroutine
 	go func() {
-		log.Printf("gRPC server listening on %s", cfg.Address())
+		slog.Info("gRPC server listening", "addr", cfg.Address())
 		serverErr <- grpcServer.Serve(lis)
 	}()
 
@@ -64,15 +65,16 @@ func main() {
 	select {
 	case err := <-serverErr: // receive server error
 		if err != nil {
-			log.Fatalf("failed to serve: %v", err)
+			slog.Error("failed to serve", "error", err)
+			os.Exit(1)
 		}
 
 	case sig := <-shutdown: // receive shutdown signal
-		log.Printf("received shutdown signal: %s", sig)
-		log.Println("gracefully stopping gRPC server")
+		slog.Info("received shutdown signal", "signal", sig.String())
+		slog.Info("gracefully stopping gRPC server")
 
 		grpcServer.GracefulStop() // gracefully stop the server
 
-		log.Println("server stopped")
+		slog.Info("server stopped")
 	}
 }
