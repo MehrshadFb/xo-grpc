@@ -39,6 +39,7 @@ func main() {
 	// gRPC server
 	grpcServer := grpc.NewServer(
 		grpc.UnaryInterceptor(transportgrpc.LoggingUnaryInterceptor),
+		grpc.StreamInterceptor(transportgrpc.LoggingStreamInterceptor),
 	)
 
 	// Enable grpcurl reflection support and register services

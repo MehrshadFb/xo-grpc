@@ -41,3 +41,40 @@ func LoggingUnaryInterceptor(
 
 	return resp, err
 }
+
+func LoggingStreamInterceptor(
+	srv any,
+	ss grpc.ServerStream,
+	info *grpc.StreamServerInfo,
+	handler grpc.StreamHandler,
+) error {
+	start := time.Now()
+
+	err := handler(srv, ss)
+
+	duration := time.Since(start)
+	code := status.Code(err)
+
+	if err != nil {
+		slog.Error(
+			"grpc stream request failed",
+			"method", info.FullMethod,
+			"code", code.String(),
+			"duration", duration.String(),
+			"client_stream", info.IsClientStream,
+			"server_stream", info.IsServerStream,
+			"error", err,
+		)
+	} else {
+		slog.Info(
+			"grpc stream request completed",
+			"method", info.FullMethod,
+			"code", code.String(),
+			"duration", duration.String(),
+			"client_stream", info.IsClientStream,
+			"server_stream", info.IsServerStream,
+		)
+	}
+
+	return err
+}
