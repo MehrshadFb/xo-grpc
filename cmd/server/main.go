@@ -35,6 +35,7 @@ func main() {
 	// gRPC handlers
 	lobbyHandler := transportgrpc.NewLobbyHandler(lobbyService)
 	gameHandler := transportgrpc.NewGameHandler(gameService, hub)
+	healthHandler := transportgrpc.NewHealthHandler()
 
 	// gRPC server
 	grpcServer := grpc.NewServer(
@@ -46,6 +47,7 @@ func main() {
 	reflection.Register(grpcServer)
 	xov1.RegisterLobbyServiceServer(grpcServer, lobbyHandler)
 	xov1.RegisterGameServiceServer(grpcServer, gameHandler)
+	xov1.RegisterHealthServiceServer(grpcServer, healthHandler)
 
 	// Listen
 	lis, err := net.Listen("tcp", cfg.Address())

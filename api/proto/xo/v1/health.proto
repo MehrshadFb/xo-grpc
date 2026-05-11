@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package xo.v1;
+option go_package = "github.com/MehrshadFb/xo-grpc/gen/go/xo/v1;v1";
+
+service HealthService {
+  rpc Health(HealthRequest) returns (HealthResponse);
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  HealthStatus status = 1;
+  string message = 2;
+}
+
+enum HealthStatus {
+  HEALTH_STATUS_UNSPECIFIED = 0;
+  HEALTH_STATUS_SERVING = 1;
+  HEALTH_STATUS_NOT_SERVING = 2;
+}
