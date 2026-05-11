@@ -23,6 +23,13 @@ import (
 func main() {
 	cfg := config.Load()
 
+	// Database
+	if cfg.DatabaseURL != "" {
+		slog.Info("database configured")
+	} else {
+		slog.Info("database not configured; using in-memory storage")
+	}
+
 	// Infrastructure
 	store := memory.NewStore()
 	sessions := session.NewManager()
