@@ -1,0 +1,6 @@
+.git
+.github
+gen/go
+tmp
+*.log
+.DS_Store
