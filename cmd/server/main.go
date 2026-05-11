@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	xov1 "github.com/MehrshadFb/xo-grpc/gen/go/xo/v1"
+	"github.com/MehrshadFb/xo-grpc/internal/config"
 	"github.com/MehrshadFb/xo-grpc/internal/realtime"
 	gamesvc "github.com/MehrshadFb/xo-grpc/internal/service/game"
 	"github.com/MehrshadFb/xo-grpc/internal/service/lobby"
@@ -20,6 +21,8 @@ import (
 )
 
 func main() {
+	cfg := config.Load()
+
 	// Infrastructure
 	store := memory.NewStore()
 	sessions := session.NewManager()
@@ -42,7 +45,7 @@ func main() {
 	xov1.RegisterGameServiceServer(grpcServer, gameHandler)
 
 	// Listen
-	lis, err := net.Listen("tcp", ":50051")
+	lis, err := net.Listen("tcp", cfg.Address())
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
@@ -51,11 +54,11 @@ func main() {
 
 	// start the server in a goroutine
 	go func() {
-		log.Println("gRPC server listening on :50051")
+		log.Printf("gRPC server listening on %s", cfg.Address())
 		serverErr <- grpcServer.Serve(lis)
 	}()
 
-	shutdown := make(chan os.Signal, 1) // channel to receive shutdown signals
+	shutdown := make(chan os.Signal, 1)                      // channel to receive shutdown signals
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM) // notify when SIGINT or SIGTERM is received
 
 	select {
