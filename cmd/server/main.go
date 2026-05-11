@@ -37,7 +37,9 @@ func main() {
 	gameHandler := transportgrpc.NewGameHandler(gameService, hub)
 
 	// gRPC server
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(transportgrpc.LoggingUnaryInterceptor),
+	)
 
 	// Enable grpcurl reflection support and register services
 	reflection.Register(grpcServer)
