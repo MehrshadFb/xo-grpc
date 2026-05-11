@@ -160,3 +160,106 @@ func TestCreateJoinMoveAndWatchGame(t *testing.T) {
 		t.Fatalf("expected next turn O, got %v", moveEvent.GetState().GetNextTurn())
 	}
 }
+
+func TestWatchGameReceivesGameOverEvent(t *testing.T) {
+	addr := startTestServer(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		t.Fatalf("grpc dial: %v", err)
+	}
+	defer conn.Close()
+
+	lobbyClient := xov1.NewLobbyServiceClient(conn)
+	gameClient := xov1.NewGameServiceClient(conn)
+
+	createResp, err := lobbyClient.CreateGame(ctx, &xov1.CreateGameRequest{
+		DisplayName: "Alice",
+	})
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+
+	gameID := createResp.GetState().GetGameId()
+	aliceToken := createResp.GetPlayerToken()
+	joinCode := createResp.GetState().GetJoinCode()
+
+	stream, err := gameClient.WatchGame(ctx, &xov1.WatchGameRequest{
+		GameId:      gameID,
+		PlayerToken: aliceToken,
+	})
+	if err != nil {
+		t.Fatalf("WatchGame: %v", err)
+	}
+
+	snapshot, err := stream.Recv()
+	if err != nil {
+		t.Fatalf("snapshot recv: %v", err)
+	}
+	if snapshot.GetType() != xov1.GameEventType_GAME_EVENT_TYPE_STATE_SNAPSHOT {
+		t.Fatalf("expected snapshot, got %v", snapshot.GetType())
+	}
+
+	joinResp, err := lobbyClient.JoinGame(ctx, &xov1.JoinGameRequest{
+		JoinCode:    joinCode,
+		DisplayName: "Bob",
+	})
+	if err != nil {
+		t.Fatalf("JoinGame: %v", err)
+	}
+
+	bobToken := joinResp.GetPlayerToken()
+
+	playerJoined, err := stream.Recv()
+	if err != nil {
+		t.Fatalf("player joined recv: %v", err)
+	}
+	if playerJoined.GetType() != xov1.GameEventType_GAME_EVENT_TYPE_PLAYER_JOINED {
+		t.Fatalf("expected player joined, got %v", playerJoined.GetType())
+	}
+
+	moves := []struct {
+		token string
+		cell  int32
+	}{
+		{aliceToken, 0}, // X
+		{bobToken, 3},   // O
+		{aliceToken, 1}, // X
+		{bobToken, 4},   // O
+		{aliceToken, 2}, // X wins top row
+	}
+
+	var lastEvent *xov1.GameEvent
+
+	for i, move := range moves {
+		_, err := gameClient.MakeMove(ctx, &xov1.MakeMoveRequest{
+			GameId:      gameID,
+			PlayerToken: move.token,
+			CellIndex:   move.cell,
+		})
+		if err != nil {
+			t.Fatalf("MakeMove #%d: %v", i+1, err)
+		}
+
+		lastEvent, err = stream.Recv()
+		if err != nil {
+			t.Fatalf("stream recv after move #%d: %v", i+1, err)
+		}
+	}
+
+	if lastEvent.GetType() != xov1.GameEventType_GAME_EVENT_TYPE_GAME_OVER {
+		t.Fatalf("expected GAME_OVER event, got %v", lastEvent.GetType())
+	}
+	if lastEvent.GetGameOverReason() != xov1.GameOverReason_GAME_OVER_REASON_WIN {
+		t.Fatalf("expected WIN reason, got %v", lastEvent.GetGameOverReason())
+	}
+	if lastEvent.GetState().GetWinner() != xov1.Mark_MARK_X {
+		t.Fatalf("expected winner X, got %v", lastEvent.GetState().GetWinner())
+	}
+	if lastEvent.GetState().GetStatus() != xov1.GameStatus_GAME_STATUS_FINISHED {
+		t.Fatalf("expected finished status, got %v", lastEvent.GetState().GetStatus())
+	}
+}
