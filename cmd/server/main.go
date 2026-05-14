@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"net"
 	"os"
@@ -9,6 +10,7 @@ import (
 
 	xov1 "github.com/MehrshadFb/xo-grpc/gen/go/xo/v1"
 	"github.com/MehrshadFb/xo-grpc/internal/config"
+	"github.com/MehrshadFb/xo-grpc/internal/database"
 	"github.com/MehrshadFb/xo-grpc/internal/realtime"
 	gamesvc "github.com/MehrshadFb/xo-grpc/internal/service/game"
 	"github.com/MehrshadFb/xo-grpc/internal/service/lobby"
@@ -22,10 +24,18 @@ import (
 
 func main() {
 	cfg := config.Load()
+	ctx := context.Background()
 
 	// Database
 	if cfg.DatabaseURL != "" {
-		slog.Info("database configured")
+		dbPool, err := database.NewPostgresPool(ctx, cfg.DatabaseURL)
+		if err != nil {
+			slog.Error("failed to connect to postgres", "error", err)
+			os.Exit(1)
+		}
+		defer dbPool.Close()
+	
+		slog.Info("connected to postgres")
 	} else {
 		slog.Info("database not configured; using in-memory storage")
 	}
