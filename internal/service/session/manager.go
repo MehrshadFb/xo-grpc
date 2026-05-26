@@ -4,19 +4,19 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
-	"sync"
 
 	"github.com/MehrshadFb/xo-grpc/internal/domain/game"
+	domainsession "github.com/MehrshadFb/xo-grpc/internal/domain/session"
+	"github.com/MehrshadFb/xo-grpc/internal/repository"
 )
 
 type Manager struct {
-	mu sync.RWMutex
-	byToken map[string]Session
+	repo repository.SessionRepository
 }
 
-func NewManager() *Manager {
+func NewManager(repo repository.SessionRepository) *Manager {
 	return &Manager{
-		byToken: make(map[string]Session),
+		repo: repo,
 	}
 }
 
@@ -33,38 +33,31 @@ func (m *Manager) Create(gameID, playerID string, mark game.Mark) (string, error
 		return "", err
 	}
 
-	s := Session{
+	s := domainsession.Session{
 		Token:    token,
 		GameID:   gameID,
 		PlayerID: playerID,
 		Mark:     mark,
 	}
 
-	m.mu.Lock()
-	m.byToken[token] = s
-	m.mu.Unlock()
+	if err := m.repo.Create(s); err != nil {
+		return "", err
+	}
 
 	return token, nil
 }
 
-func (m *Manager) Get(token string) (Session, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	s, ok := m.byToken[token]
-	if !ok {
-		return Session{}, ErrSessionNotFound
-	}
-	return s, nil
+func (m *Manager) Get(token string) (domainsession.Session, error) {
+	return m.repo.Get(token)
 }
 
-func (m *Manager) ValidateGame(token, gameID string) (Session, error) {
+func (m *Manager) ValidateGame(token, gameID string) (domainsession.Session, error) {
 	s, err := m.Get(token)
 	if err != nil {
-		return Session{}, err
+		return domainsession.Session{}, err
 	}
 	if s.GameID != gameID {
-		return Session{}, ErrSessionGameMismatch
+		return domainsession.Session{}, ErrSessionGameMismatch
 	}
 	return s, nil
 }

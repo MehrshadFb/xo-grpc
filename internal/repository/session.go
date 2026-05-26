@@ -1,8 +1,8 @@
 package repository
 
-import "github.com/MehrshadFb/xo-grpc/internal/service/session"
+import domainsession "github.com/MehrshadFb/xo-grpc/internal/domain/session"
 
 type SessionRepository interface {
-	Create(session.Session)
-	Get(token string) (session.Session, bool)
+	Create(s domainsession.Session) error
+	Get(token string) (domainsession.Session, error)
 }

@@ -26,7 +26,8 @@ func startTestServer(t *testing.T) string {
 	}
 
 	store := memory.NewStore()
-	sessions := session.NewManager()
+	sessionRepo := memory.NewSessionRepository()
+	sessions := session.NewManager(sessionRepo)
 	hub := realtime.NewHub()
 
 	lobbySvc := lobby.NewService(store, sessions, hub)

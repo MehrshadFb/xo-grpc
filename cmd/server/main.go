@@ -30,10 +30,17 @@ func main() {
 
 	// Infrastructure
 	memStore := memory.NewStore()
-	sessions := session.NewManager()
+	memorySessionRepo := memory.NewSessionRepository()
 	hub := realtime.NewHub()
 
-	var gameRepo repository.GameRepository = memStore
+	var (
+		gameRepo    repository.GameRepository
+		sessionRepo repository.SessionRepository
+	)
+
+	// Default to in-memory repositories
+	gameRepo = memStore
+	sessionRepo = memorySessionRepo
 
 	// Database
 	if cfg.DatabaseURL != "" {
@@ -45,10 +52,14 @@ func main() {
 		defer dbPool.Close()
 
 		gameRepo = postgresstore.NewGameRepository(dbPool)
-		slog.Info("connected to postgres; using postgres game repository")
+		sessionRepo = postgresstore.NewSessionRepository(dbPool)
+		slog.Info("connected to postgres; using postgres repositories")
 	} else {
-		slog.Info("database not configured; using in-memory game repository")
+		slog.Info("database not configured; using in-memory repositories")
 	}
+
+	// Session manager
+	sessions := session.NewManager(sessionRepo)
 
 	// Services
 	lobbyService := lobby.NewService(gameRepo, sessions, hub)

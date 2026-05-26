@@ -13,7 +13,8 @@ func setupStartedGame(t *testing.T) (*Service, *lobby.CreateGameResult, *lobby.J
 	t.Helper()
 
 	store := memory.NewStore()
-	sessions := session.NewManager()
+	sessionRepo := memory.NewSessionRepository()
+	sessions := session.NewManager(sessionRepo)
 
 	lobbySvc := lobby.NewService(store, sessions, nil)
 	gameSvc := NewService(store, sessions, nil)

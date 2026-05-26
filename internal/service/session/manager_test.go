@@ -1,13 +1,16 @@
-package session
+package session_test
 
 import (
 	"testing"
 
 	"github.com/MehrshadFb/xo-grpc/internal/domain/game"
+	"github.com/MehrshadFb/xo-grpc/internal/service/session"
+	"github.com/MehrshadFb/xo-grpc/internal/store/memory"
 )
 
 func TestManager_CreateAndGet(t *testing.T) {
-	m := NewManager()
+	repo := memory.NewSessionRepository()
+	m := session.NewManager(repo)
 
 	token, err := m.Create("game1", "player1", game.MarkX)
 	if err != nil {
@@ -27,16 +30,18 @@ func TestManager_CreateAndGet(t *testing.T) {
 }
 
 func TestManager_Get_NotFound(t *testing.T) {
-	m := NewManager()
+	repo := memory.NewSessionRepository()
+	m := session.NewManager(repo)
 
 	_, err := m.Get("missing")
-	if err != ErrSessionNotFound {
+	if err != session.ErrSessionNotFound {
 		t.Fatalf("expected ErrSessionNotFound, got %v", err)
 	}
 }
 
 func TestManager_ValidateGame_Mismatch(t *testing.T) {
-	m := NewManager()
+	repo := memory.NewSessionRepository()
+	m := session.NewManager(repo)
 
 	token, err := m.Create("game1", "player1", game.MarkX)
 	if err != nil {
@@ -44,7 +49,7 @@ func TestManager_ValidateGame_Mismatch(t *testing.T) {
 	}
 
 	_, err = m.ValidateGame(token, "game2")
-	if err != ErrSessionGameMismatch {
+	if err != session.ErrSessionGameMismatch {
 		t.Fatalf("expected ErrSessionGameMismatch, got %v", err)
 	}
 }
