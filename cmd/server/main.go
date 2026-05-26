@@ -12,10 +12,12 @@ import (
 	"github.com/MehrshadFb/xo-grpc/internal/config"
 	"github.com/MehrshadFb/xo-grpc/internal/database"
 	"github.com/MehrshadFb/xo-grpc/internal/realtime"
+	"github.com/MehrshadFb/xo-grpc/internal/repository"
 	gamesvc "github.com/MehrshadFb/xo-grpc/internal/service/game"
 	"github.com/MehrshadFb/xo-grpc/internal/service/lobby"
 	"github.com/MehrshadFb/xo-grpc/internal/service/session"
 	"github.com/MehrshadFb/xo-grpc/internal/store/memory"
+	postgresstore "github.com/MehrshadFb/xo-grpc/internal/store/postgres"
 	transportgrpc "github.com/MehrshadFb/xo-grpc/internal/transport/grpc"
 
 	"google.golang.org/grpc"
@@ -26,6 +28,13 @@ func main() {
 	cfg := config.Load()
 	ctx := context.Background()
 
+	// Infrastructure
+	memStore := memory.NewStore()
+	sessions := session.NewManager()
+	hub := realtime.NewHub()
+
+	var gameRepo repository.GameRepository = memStore
+
 	// Database
 	if cfg.DatabaseURL != "" {
 		dbPool, err := database.NewPostgresPool(ctx, cfg.DatabaseURL)
@@ -34,20 +43,16 @@ func main() {
 			os.Exit(1)
 		}
 		defer dbPool.Close()
-	
-		slog.Info("connected to postgres")
+
+		gameRepo = postgresstore.NewGameRepository(dbPool)
+		slog.Info("connected to postgres; using postgres game repository")
 	} else {
-		slog.Info("database not configured; using in-memory storage")
+		slog.Info("database not configured; using in-memory game repository")
 	}
 
-	// Infrastructure
-	store := memory.NewStore()
-	sessions := session.NewManager()
-	hub := realtime.NewHub()
-
 	// Services
-	lobbyService := lobby.NewService(store, sessions, hub)
-	gameService := gamesvc.NewService(store, sessions, hub)
+	lobbyService := lobby.NewService(gameRepo, sessions, hub)
+	gameService := gamesvc.NewService(gameRepo, sessions, hub)
 
 	// gRPC handlers
 	lobbyHandler := transportgrpc.NewLobbyHandler(lobbyService)
