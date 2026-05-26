@@ -2,7 +2,9 @@ package memory
 
 import (
 	"errors"
+
 	"github.com/MehrshadFb/xo-grpc/internal/domain/game"
+	"github.com/MehrshadFb/xo-grpc/internal/repository"
 )
 
 func (s *Store) Create(g *game.Game) error {
@@ -77,3 +79,5 @@ func (s *Store) Update(g *game.Game) error {
 	s.byID[g.ID] = g
 	return nil
 }
+
+var _ repository.GameRepository = (*Store)(nil)

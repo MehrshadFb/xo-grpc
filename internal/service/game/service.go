@@ -5,19 +5,19 @@ import (
 
 	domaingame "github.com/MehrshadFb/xo-grpc/internal/domain/game"
 	"github.com/MehrshadFb/xo-grpc/internal/realtime"
+	"github.com/MehrshadFb/xo-grpc/internal/repository"
 	"github.com/MehrshadFb/xo-grpc/internal/service/session"
-	"github.com/MehrshadFb/xo-grpc/internal/store/memory"
 )
 
 type Service struct {
-	store    *memory.Store
+	games    repository.GameRepository
 	sessions *session.Manager
 	hub      *realtime.Hub
 }
 
-func NewService(store *memory.Store, sessions *session.Manager, hub *realtime.Hub) *Service {
+func NewService(games repository.GameRepository, sessions *session.Manager, hub *realtime.Hub) *Service {
 	return &Service{
-		store:    store,
+		games:    games,
 		sessions: sessions,
 		hub:      hub,
 	}
@@ -38,7 +38,7 @@ func (s *Service) GetState(gameID, playerToken string) (*GetStateResult, error) 
 		return nil, err
 	}
 
-	g, err := s.store.GetByID(gameID)
+	g, err := s.games.GetByID(gameID)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func (s *Service) MakeMove(gameID, playerToken string, cellIndex int) (*MakeMove
 		return nil, err
 	}
 
-	g, err := s.store.GetByID(gameID)
+	g, err := s.games.GetByID(gameID)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func (s *Service) MakeMove(gameID, playerToken string, cellIndex int) (*MakeMove
 		return nil, err
 	}
 
-	if err := s.store.Update(g); err != nil {
+	if err := s.games.Update(g); err != nil {
 		return nil, err
 	}
 

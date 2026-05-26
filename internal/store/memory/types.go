@@ -1,12 +1,12 @@
 package memory
 
 import (
-	"sync"
 	"github.com/MehrshadFb/xo-grpc/internal/domain/game"
+	"sync"
 )
 
 type Store struct {
-	mu sync.RWMutex
+	mu         sync.RWMutex
 	byID       map[string]*game.Game
 	byJoinCode map[string]string
 }

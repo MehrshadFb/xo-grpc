@@ -5,19 +5,20 @@ import (
 
 	"github.com/MehrshadFb/xo-grpc/internal/domain/game"
 	"github.com/MehrshadFb/xo-grpc/internal/realtime"
+	"github.com/MehrshadFb/xo-grpc/internal/repository"
 	"github.com/MehrshadFb/xo-grpc/internal/service/session"
 	"github.com/MehrshadFb/xo-grpc/internal/store/memory"
 )
 
 type Service struct {
-	store    *memory.Store
+	games    repository.GameRepository
 	sessions *session.Manager
 	hub      *realtime.Hub
 }
 
-func NewService(store *memory.Store, sessions *session.Manager, hub *realtime.Hub) *Service {
+func NewService(games repository.GameRepository, sessions *session.Manager, hub *realtime.Hub) *Service {
 	return &Service{
-		store:    store,
+		games:    games,
 		sessions: sessions,
 		hub:      hub,
 	}
@@ -52,7 +53,7 @@ func (s *Service) CreateGame(displayName string) (*CreateGameResult, error) {
 	g.SetPlayerX(playerID, displayName)
 
 	// 4) Persist game
-	if err := s.store.Create(g); err != nil {
+	if err := s.games.Create(g); err != nil {
 		return nil, err
 	}
 
@@ -80,7 +81,7 @@ func (s *Service) JoinGame(joinCode, displayName string) (*JoinGameResult, error
 		return nil, ErrInvalidJoinCode
 	}
 
-	g, err := s.store.GetByJoinCode(joinCode)
+	g, err := s.games.GetByJoinCode(joinCode)
 	if err != nil {
 		if err == memory.ErrJoinCodeNotFound {
 			return nil, ErrInvalidJoinCode
@@ -106,10 +107,10 @@ func (s *Service) JoinGame(joinCode, displayName string) (*JoinGameResult, error
 		return nil, err
 	}
 
-	if err := s.store.Update(g); err != nil {
+	if err := s.games.Update(g); err != nil {
 		return nil, err
 	}
-	
+
 	if s.hub != nil {
 		s.hub.Publish(g.ID, realtime.Event{
 			Type: realtime.EventTypePlayerJoined,
