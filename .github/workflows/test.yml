@@ -41,9 +41,20 @@ jobs:
       - name: Generate protobuf code
         run: make proto
 
+      # run migrations
+      - name: Run migrations
+        run: |
+          curl -L https://github.com/golang-migrate/migrate/releases/download/v4.19.0/migrate.linux-amd64.tar.gz | tar xvz
+          sudo mv migrate /usr/local/bin/migrate
+          make migrate-up
+
       # run all tests with race detector (including e2e tests)
       - name: Run tests with race detector
         run: go test -race ./...
+
+      # run PostgreSQL integration tests
+      - name: Run PostgreSQL integration tests
+        run: go test ./internal/store/postgres -v
 
       # build Docker image
       - name: Build Docker image
