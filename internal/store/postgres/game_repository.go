@@ -91,8 +91,7 @@ func (r *GameRepository) Update(g *domaingame.Game) error {
 		return err
 	}
 
-	expectedVersion := g.Version
-	newVersion := g.Version + 1
+	expectedVersion := g.Version - 1
 
 	ctx := context.Background()
 	tx, err := r.pool.Begin(ctx)
@@ -121,7 +120,7 @@ func (r *GameRepository) Update(g *domaingame.Game) error {
 		markToString(g.Winner),
 		g.IsDraw,
 		g.MoveNumber,
-		newVersion,
+		g.Version,
 		expectedVersion,
 	)
 	if err != nil {
@@ -131,8 +130,6 @@ func (r *GameRepository) Update(g *domaingame.Game) error {
 	if result.RowsAffected() == 0 {
 		return repository.ErrConflict
 	}
-
-	g.Version = newVersion
 
 	_, err = tx.Exec(ctx, `DELETE FROM players WHERE game_id = $1`, g.ID)
 	if err != nil {
