@@ -34,7 +34,7 @@ jobs:
     
     # environment variables for the tests
     env:
-      DATABASE_URL: postgres://xo_user:xo_password@postgres:5432/xo_grpc?sslmode=disable
+      DATABASE_URL: postgres://xo_user:xo_password@localhost:5432/xo_grpc?sslmode=disable
 
     steps:
       # download the repo to the VM
