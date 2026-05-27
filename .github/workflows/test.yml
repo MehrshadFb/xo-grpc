@@ -28,10 +28,10 @@ jobs:
         # health check for the PostgreSQL service
         options: >-
           --health-cmd="pg_isready -U xo_user -d xo_grpc"
-          --health-interval=5s # check every 5 seconds
-          --health-timeout=5s # timeout after 5 seconds
-          --health-retries=10 # retry 10 times
-    
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
     # environment variables for the tests
     env:
       DATABASE_URL: postgres://xo_user:xo_password@localhost:5432/xo_grpc?sslmode=disable
