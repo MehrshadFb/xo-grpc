@@ -62,16 +62,21 @@ func TestGameRepository_CreateGetAndUpdate(t *testing.T) {
 		t.Fatalf("expected game1 by join code, got %q", byCode.ID)
 	}
 
-	byID.SetPlayerO("player-o", "Bob")
-	if err := byID.Start(); err != nil {
+	latest, err := repo.GetByID("game1")
+	if err != nil {
+		t.Fatalf("GetByID latest: %v", err)
+	}
+
+	latest.SetPlayerO("player-o", "Bob")
+	if err := latest.Start(); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
 
-	if err := byID.ApplyMove(domaingame.MarkX, 4); err != nil {
+	if err := latest.ApplyMove(domaingame.MarkX, 4); err != nil {
 		t.Fatalf("ApplyMove: %v", err)
 	}
 
-	if err := repo.Update(byID); err != nil {
+	if err := repo.Update(latest); err != nil {
 		t.Fatalf("Update: %v", err)
 	}
 
@@ -92,7 +97,7 @@ func TestGameRepository_CreateGetAndUpdate(t *testing.T) {
 	if updated.NextTurn != domaingame.MarkO {
 		t.Fatalf("expected next turn O, got %v", updated.NextTurn)
 	}
-	if updated.Version != byID.Version {
-		t.Fatalf("expected version %d, got %d", byID.Version, updated.Version)
+	if updated.Version != latest.Version {
+		t.Fatalf("expected version %d, got %d", latest.Version, updated.Version)
 	}
 }
