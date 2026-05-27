@@ -12,15 +12,12 @@ import (
 	"github.com/MehrshadFb/xo-grpc/internal/config"
 	"github.com/MehrshadFb/xo-grpc/internal/database"
 	"github.com/MehrshadFb/xo-grpc/internal/realtime"
-	"github.com/MehrshadFb/xo-grpc/internal/repository"
 	gamesvc "github.com/MehrshadFb/xo-grpc/internal/service/game"
 	healthsvc "github.com/MehrshadFb/xo-grpc/internal/service/health"
 	"github.com/MehrshadFb/xo-grpc/internal/service/lobby"
 	"github.com/MehrshadFb/xo-grpc/internal/service/session"
-	"github.com/MehrshadFb/xo-grpc/internal/store/memory"
 	postgresstore "github.com/MehrshadFb/xo-grpc/internal/store/postgres"
 	transportgrpc "github.com/MehrshadFb/xo-grpc/internal/transport/grpc"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -31,38 +28,25 @@ func main() {
 	ctx := context.Background()
 
 	// Infrastructure
-	memStore := memory.NewStore()
-	memorySessionRepo := memory.NewSessionRepository()
 	hub := realtime.NewHub()
 
-	var (
-		gameRepo    repository.GameRepository
-		sessionRepo repository.SessionRepository
-	)
-
-	// Default to in-memory repositories
-	gameRepo = memStore
-	sessionRepo = memorySessionRepo
-
 	// Database
-	var (
-		dbPool *pgxpool.Pool
-		err    error
-	)
-	if cfg.DatabaseURL != "" {
-		dbPool, err = database.NewPostgresPool(ctx, cfg.DatabaseURL)
-		if err != nil {
-			slog.Error("failed to connect to postgres", "error", err)
-			os.Exit(1)
-		}
-		defer dbPool.Close()
-
-		gameRepo = postgresstore.NewGameRepository(dbPool)
-		sessionRepo = postgresstore.NewSessionRepository(dbPool)
-		slog.Info("connected to postgres; using postgres repositories")
-	} else {
-		slog.Info("database not configured; using in-memory repositories")
+	if cfg.DatabaseURL == "" {
+		slog.Error("DATABASE_URL is required")
+		os.Exit(1)
 	}
+
+	dbPool, err := database.NewPostgresPool(ctx, cfg.DatabaseURL)
+	if err != nil {
+		slog.Error("failed to connect to postgres", "error", err)
+		os.Exit(1)
+	}
+	defer dbPool.Close()
+
+	gameRepo := postgresstore.NewGameRepository(dbPool)
+	sessionRepo := postgresstore.NewSessionRepository(dbPool)
+
+	slog.Info("connected to postgres; using postgres repositories")
 
 	// Session manager
 	sessions := session.NewManager(sessionRepo)
