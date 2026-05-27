@@ -44,3 +44,7 @@ jobs:
       # run all tests with race detector (including e2e tests)
       - name: Run tests with race detector
         run: go test -race ./...
+
+      # build Docker image
+      - name: Build Docker image
+        run: docker build -t xo-grpc .
