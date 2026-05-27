@@ -91,6 +91,9 @@ func (r *GameRepository) Update(g *domaingame.Game) error {
 		return err
 	}
 
+	expectedVersion := g.Version
+	newVersion := g.Version + 1
+
 	ctx := context.Background()
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -109,7 +112,7 @@ func (r *GameRepository) Update(g *domaingame.Game) error {
 			move_number = $7,
 			version = $8,
 			updated_at = NOW()
-		WHERE id = $1
+		WHERE id = $1 AND version = $9
 	`,
 		g.ID,
 		statusToString(g.Status),
@@ -118,15 +121,18 @@ func (r *GameRepository) Update(g *domaingame.Game) error {
 		markToString(g.Winner),
 		g.IsDraw,
 		g.MoveNumber,
-		g.Version,
+		newVersion,
+		expectedVersion,
 	)
 	if err != nil {
 		return fmt.Errorf("update game: %w", err)
 	}
 
 	if result.RowsAffected() == 0 {
-		return memory.ErrGameNotFound
+		return repository.ErrConflict
 	}
+
+	g.Version = newVersion
 
 	_, err = tx.Exec(ctx, `DELETE FROM players WHERE game_id = $1`, g.ID)
 	if err != nil {
