@@ -73,7 +73,7 @@ func (h *GameHandler) WatchGame(req *xov1.WatchGameRequest, stream xov1.GameServ
 		return err
 	}
 
-	sub := h.hub.Subscribe(req.GetGameId()) // dedicated a private channel for this client to watch this game
+	sub := h.hub.Subscribe(req.GetGameId())       // dedicated a private channel for this client to watch this game
 	defer h.hub.Unsubscribe(req.GetGameId(), sub) // unsubscribe when the client disconnects
 
 	for {

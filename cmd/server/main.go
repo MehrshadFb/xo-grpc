@@ -14,11 +14,13 @@ import (
 	"github.com/MehrshadFb/xo-grpc/internal/realtime"
 	"github.com/MehrshadFb/xo-grpc/internal/repository"
 	gamesvc "github.com/MehrshadFb/xo-grpc/internal/service/game"
+	healthsvc "github.com/MehrshadFb/xo-grpc/internal/service/health"
 	"github.com/MehrshadFb/xo-grpc/internal/service/lobby"
 	"github.com/MehrshadFb/xo-grpc/internal/service/session"
 	"github.com/MehrshadFb/xo-grpc/internal/store/memory"
 	postgresstore "github.com/MehrshadFb/xo-grpc/internal/store/postgres"
 	transportgrpc "github.com/MehrshadFb/xo-grpc/internal/transport/grpc"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -43,8 +45,12 @@ func main() {
 	sessionRepo = memorySessionRepo
 
 	// Database
+	var (
+		dbPool *pgxpool.Pool
+		err    error
+	)
 	if cfg.DatabaseURL != "" {
-		dbPool, err := database.NewPostgresPool(ctx, cfg.DatabaseURL)
+		dbPool, err = database.NewPostgresPool(ctx, cfg.DatabaseURL)
 		if err != nil {
 			slog.Error("failed to connect to postgres", "error", err)
 			os.Exit(1)
@@ -64,11 +70,12 @@ func main() {
 	// Services
 	lobbyService := lobby.NewService(gameRepo, sessions, hub)
 	gameService := gamesvc.NewService(gameRepo, sessions, hub)
+	healthService := healthsvc.NewService(dbPool)
 
 	// gRPC handlers
 	lobbyHandler := transportgrpc.NewLobbyHandler(lobbyService)
 	gameHandler := transportgrpc.NewGameHandler(gameService, hub)
-	healthHandler := transportgrpc.NewHealthHandler()
+	healthHandler := transportgrpc.NewHealthHandler(healthService)
 
 	// gRPC server
 	grpcServer := grpc.NewServer(
