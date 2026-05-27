@@ -12,6 +12,24 @@ jobs:
     # runs on the latest Ubuntu LTS VM
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: xo_user
+          POSTGRES_PASSWORD: xo_password
+          POSTGRES_DB: xo_grpc
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U xo_user -d xo_grpc"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DATABASE_URL: postgres://xo_user:xo_password@postgres:5432/xo_grpc?sslmode=disable
+
     steps:
       # download the repo to the VM
       - name: Checkout repository
