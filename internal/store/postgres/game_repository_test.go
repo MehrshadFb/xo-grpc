@@ -72,12 +72,21 @@ func TestGameRepository_CreateGetAndUpdate(t *testing.T) {
 		t.Fatalf("Start: %v", err)
 	}
 
+	if err := repo.Update(latest); err != nil {
+		t.Fatalf("Update after Start: %v", err)
+	}
+
+	latest, err = repo.GetByID("game1")
+	if err != nil {
+		t.Fatalf("GetByID after start: %v", err)
+	}
+
 	if err := latest.ApplyMove(domaingame.MarkX, 4); err != nil {
 		t.Fatalf("ApplyMove: %v", err)
 	}
 
 	if err := repo.Update(latest); err != nil {
-		t.Fatalf("Update: %v", err)
+		t.Fatalf("Update after move: %v", err)
 	}
 
 	updated, err := repo.GetByID("game1")
