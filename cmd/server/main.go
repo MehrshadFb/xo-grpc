@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,6 +12,7 @@ import (
 	xov1 "github.com/MehrshadFb/xo-grpc/gen/go/xo/v1"
 	"github.com/MehrshadFb/xo-grpc/internal/config"
 	"github.com/MehrshadFb/xo-grpc/internal/database"
+	"github.com/MehrshadFb/xo-grpc/internal/metrics"
 	"github.com/MehrshadFb/xo-grpc/internal/realtime"
 	gamesvc "github.com/MehrshadFb/xo-grpc/internal/service/game"
 	healthsvc "github.com/MehrshadFb/xo-grpc/internal/service/health"
@@ -18,6 +20,7 @@ import (
 	"github.com/MehrshadFb/xo-grpc/internal/service/session"
 	postgresstore "github.com/MehrshadFb/xo-grpc/internal/store/postgres"
 	transportgrpc "github.com/MehrshadFb/xo-grpc/internal/transport/grpc"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -26,6 +29,7 @@ import (
 func main() {
 	cfg := config.Load()
 	ctx := context.Background()
+	metrics.Register()
 
 	// Infrastructure
 	hub := realtime.NewHub()
@@ -91,6 +95,20 @@ func main() {
 	shutdown := make(chan os.Signal, 1)                      // channel to receive shutdown signals
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM) // notify when SIGINT or SIGTERM is received
 
+	// start the metrics server in a goroutine
+	metricsServer := &http.Server{
+		Addr:    ":9090",
+		Handler: promhttp.Handler(),
+	}
+
+	go func() {
+		slog.Info("metrics server listening", "addr", ":9090")
+
+		if err := metricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("metrics server failed", "error", err)
+		}
+	}()
+
 	select {
 	case err := <-serverErr: // receive server error
 		if err != nil {
@@ -103,6 +121,11 @@ func main() {
 		slog.Info("gracefully stopping gRPC server")
 
 		grpcServer.GracefulStop() // gracefully stop the server
+
+		// shutdown the metrics server
+		if err := metricsServer.Shutdown(ctx); err != nil {
+			slog.Error("failed to shutdown metrics server", "error", err)
+		}
 
 		slog.Info("server stopped")
 	}

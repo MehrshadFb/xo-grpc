@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/MehrshadFb/xo-grpc/internal/metrics"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
 )
@@ -21,6 +22,18 @@ func LoggingUnaryInterceptor(
 
 	duration := time.Since(start)
 	code := status.Code(err)
+
+	metrics.GRPCRequestsTotal.WithLabelValues(
+		info.FullMethod,
+		code.String(),
+		"unary",
+	).Inc()
+
+	metrics.GRPCRequestDurationSeconds.WithLabelValues(
+		info.FullMethod,
+		code.String(),
+		"unary",
+	).Observe(duration.Seconds())
 
 	if err != nil {
 		slog.Error(
@@ -54,6 +67,18 @@ func LoggingStreamInterceptor(
 
 	duration := time.Since(start)
 	code := status.Code(err)
+
+	metrics.GRPCRequestsTotal.WithLabelValues(
+		info.FullMethod,
+		code.String(),
+		"stream",
+	).Inc()
+
+	metrics.GRPCRequestDurationSeconds.WithLabelValues(
+		info.FullMethod,
+		code.String(),
+		"stream",
+	).Observe(duration.Seconds())
 
 	if err != nil {
 		slog.Error(
