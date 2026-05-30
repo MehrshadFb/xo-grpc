@@ -6,6 +6,7 @@ import (
 
 	xov1 "github.com/MehrshadFb/xo-grpc/gen/go/xo/v1"
 	domaingame "github.com/MehrshadFb/xo-grpc/internal/domain/game"
+	"github.com/MehrshadFb/xo-grpc/internal/metrics"
 	"github.com/MehrshadFb/xo-grpc/internal/realtime"
 	gamesvc "github.com/MehrshadFb/xo-grpc/internal/service/game"
 	"github.com/MehrshadFb/xo-grpc/internal/service/session"
@@ -74,6 +75,9 @@ func (h *GameHandler) WatchGame(req *xov1.WatchGameRequest, stream xov1.GameServ
 			return err
 		}
 	}
+
+	metrics.ActiveWatchStreams.Inc()       // increment the number of active watch streams
+	defer metrics.ActiveWatchStreams.Dec() // decrement the number of active watch streams when the client disconnects
 
 	sub := h.hub.Subscribe(req.GetGameId())       // dedicated a private channel for this client to watch this game
 	defer h.hub.Unsubscribe(req.GetGameId(), sub) // unsubscribe when the client disconnects
