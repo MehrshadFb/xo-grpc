@@ -7,6 +7,26 @@ import (
 	"github.com/MehrshadFb/xo-grpc/internal/repository"
 )
 
+func cloneGame(g *game.Game) *game.Game {
+	if g == nil {
+		return nil
+	}
+
+	clone := *g
+
+	if g.PlayerX != nil {
+		playerX := *g.PlayerX
+		clone.PlayerX = &playerX
+	}
+
+	if g.PlayerO != nil {
+		playerO := *g.PlayerO
+		clone.PlayerO = &playerO
+	}
+
+	return &clone
+}
+
 func (s *Store) Create(g *game.Game) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -27,7 +47,7 @@ func (s *Store) Create(g *game.Game) error {
 		}
 	}
 
-	s.byID[g.ID] = g
+	s.byID[g.ID] = cloneGame(g)
 	if g.JoinCode != "" {
 		s.byJoinCode[g.JoinCode] = g.ID
 	}
@@ -42,7 +62,7 @@ func (s *Store) GetByID(id string) (*game.Game, error) {
 	if !ok {
 		return nil, ErrGameNotFound
 	}
-	return g, nil
+	return cloneGame(g), nil
 }
 
 func (s *Store) GetByJoinCode(code string) (*game.Game, error) {
@@ -58,7 +78,7 @@ func (s *Store) GetByJoinCode(code string) (*game.Game, error) {
 	if !ok {
 		return nil, ErrGameNotFound
 	}
-	return g, nil
+	return cloneGame(g), nil
 }
 
 func (s *Store) Update(g *game.Game) error {
@@ -76,7 +96,7 @@ func (s *Store) Update(g *game.Game) error {
 		return ErrGameNotFound
 	}
 
-	s.byID[g.ID] = g
+	s.byID[g.ID] = cloneGame(g)
 	return nil
 }
 

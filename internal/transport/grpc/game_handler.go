@@ -64,13 +64,15 @@ func (h *GameHandler) WatchGame(req *xov1.WatchGameRequest, stream xov1.GameServ
 		return gameError(err)
 	}
 
-	if err := stream.Send(&xov1.GameEvent{
-		Type:    xov1.GameEventType_GAME_EVENT_TYPE_STATE_SNAPSHOT,
-		EventId: result.Game.Version,
-		State:   toProtoGameState(result.Game),
-		Message: "initial game state",
-	}); err != nil {
-		return err
+	if result.Game.Version > req.GetAfterVersion() {
+		if err := stream.Send(&xov1.GameEvent{
+			Type:    xov1.GameEventType_GAME_EVENT_TYPE_STATE_SNAPSHOT,
+			EventId: result.Game.Version,
+			State:   toProtoGameState(result.Game),
+			Message: "initial game state",
+		}); err != nil {
+			return err
+		}
 	}
 
 	sub := h.hub.Subscribe(req.GetGameId())       // dedicated a private channel for this client to watch this game

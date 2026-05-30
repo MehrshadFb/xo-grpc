@@ -51,4 +51,5 @@ message GameEvent {
 message WatchGameRequest {
   string game_id = 1;
   string player_token = 2;
+  int64 after_version = 3;
 }
