@@ -131,19 +131,14 @@ func (r *GameRepository) Update(g *domaingame.Game) error {
 		return repository.ErrConflict
 	}
 
-	_, err = tx.Exec(ctx, `DELETE FROM players WHERE game_id = $1`, g.ID)
-	if err != nil {
-		return fmt.Errorf("delete players: %w", err)
-	}
-
 	if g.PlayerX != nil {
-		if err := insertPlayer(ctx, tx, g.ID, g.PlayerX); err != nil {
+		if err := upsertPlayer(ctx, tx, g.ID, g.PlayerX); err != nil {
 			return err
 		}
 	}
 
 	if g.PlayerO != nil {
-		if err := insertPlayer(ctx, tx, g.ID, g.PlayerO); err != nil {
+		if err := upsertPlayer(ctx, tx, g.ID, g.PlayerO); err != nil {
 			return err
 		}
 	}
@@ -241,6 +236,27 @@ func insertPlayer(ctx context.Context, tx pgx.Tx, gameID string, p *domaingame.P
 	)
 	if err != nil {
 		return fmt.Errorf("insert player: %w", err)
+	}
+
+	return nil
+}
+
+func upsertPlayer(ctx context.Context, tx pgx.Tx, gameID string, p *domaingame.Player) error {
+	_, err := tx.Exec(ctx, `
+		INSERT INTO players (id, game_id, display_name, mark)
+		VALUES ($1,$2,$3,$4)
+		ON CONFLICT (id) DO UPDATE
+		SET
+			display_name = EXCLUDED.display_name,
+			mark = EXCLUDED.mark
+	`,
+		p.ID,
+		gameID,
+		p.DisplayName,
+		markToString(p.Mark),
+	)
+	if err != nil {
+		return fmt.Errorf("upsert player: %w", err)
 	}
 
 	return nil

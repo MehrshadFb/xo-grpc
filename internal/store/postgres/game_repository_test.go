@@ -7,6 +7,7 @@ import (
 
 	"github.com/MehrshadFb/xo-grpc/internal/database"
 	domaingame "github.com/MehrshadFb/xo-grpc/internal/domain/game"
+	"github.com/MehrshadFb/xo-grpc/internal/service/session"
 )
 
 func TestGameRepository_CreateGetAndUpdate(t *testing.T) {
@@ -31,6 +32,8 @@ func TestGameRepository_CreateGetAndUpdate(t *testing.T) {
 	}
 
 	repo := NewGameRepository(pool)
+	sessionRepo := NewSessionRepository(pool)
+	sessions := session.NewManager(sessionRepo)
 
 	g := domaingame.NewGame("game1", "CODE1")
 	g.SetPlayerX("player-x", "Alice")
@@ -62,6 +65,11 @@ func TestGameRepository_CreateGetAndUpdate(t *testing.T) {
 		t.Fatalf("expected game1 by join code, got %q", byCode.ID)
 	}
 
+	playerXToken, err := sessions.Create("game1", "player-x", domaingame.MarkX)
+	if err != nil {
+		t.Fatalf("Create player X session: %v", err)
+	}
+
 	latest, err := repo.GetByID("game1")
 	if err != nil {
 		t.Fatalf("GetByID latest: %v", err)
@@ -74,6 +82,10 @@ func TestGameRepository_CreateGetAndUpdate(t *testing.T) {
 
 	if err := repo.Update(latest); err != nil {
 		t.Fatalf("Update after Start: %v", err)
+	}
+
+	if _, err := sessions.Get(playerXToken); err != nil {
+		t.Fatalf("expected player X session to survive update: %v", err)
 	}
 
 	latest, err = repo.GetByID("game1")
