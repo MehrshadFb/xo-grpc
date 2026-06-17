@@ -8,6 +8,7 @@ import "xo/v1/common.proto";
 service GameService {
   rpc GetState(GetStateRequest) returns (GetStateResponse);
   rpc MakeMove(MakeMoveRequest) returns (MakeMoveResponse);
+  rpc RequestRematch(RequestRematchRequest) returns (RequestRematchResponse);
   rpc WatchGame(WatchGameRequest) returns (stream GameEvent);
 }
 
@@ -30,6 +31,15 @@ message MakeMoveResponse {
   GameState state = 1;
 }
 
+message RequestRematchRequest {
+  string game_id = 1;
+  string player_token = 2;
+}
+
+message RequestRematchResponse {
+  GameState state = 1;
+}
+
 enum GameEventType {
   GAME_EVENT_TYPE_UNSPECIFIED = 0;
   GAME_EVENT_TYPE_STATE_SNAPSHOT = 1; // first event on stream
@@ -37,6 +47,8 @@ enum GameEventType {
   GAME_EVENT_TYPE_MOVE_MADE = 3;
   GAME_EVENT_TYPE_GAME_OVER = 4;
   GAME_EVENT_TYPE_PLAYER_LEFT = 5; // due to resign or timeout
+  GAME_EVENT_TYPE_REMATCH_REQUESTED = 6; // rematch requested by a player
+  GAME_EVENT_TYPE_ROUND_STARTED = 7; // round started after rematch request
 }
 
 message GameEvent {
