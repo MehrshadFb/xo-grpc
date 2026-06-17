@@ -57,12 +57,14 @@ func (g *Game) ApplyMove(player Mark, cell int) error {
 		g.Status = StatusFinished
 		g.Winner = w
 		g.IsDraw = false
+		g.recordOutcome()
 		return nil
 	}
 	if isDraw(g.Board) {
 		g.Status = StatusFinished
 		g.Winner = MarkEmpty
 		g.IsDraw = true
+		g.recordOutcome()
 		return nil
 	}
 
@@ -77,6 +79,74 @@ func (g *Game) ApplyMove(player Mark, cell int) error {
 		g.NextTurn = MarkX
 	}
 	return nil
+}
+
+type RematchResult int
+
+const (
+	RematchNoop RematchResult = iota
+	RematchRequested
+	RematchStarted
+)
+
+func (g *Game) RequestRematch(player Mark) (RematchResult, error) {
+	if player != MarkX && player != MarkO {
+		return RematchNoop, ErrInvalidPlayerMark
+	}
+	if g.Status != StatusFinished {
+		return RematchNoop, ErrGameNotFinished
+	}
+	if g.PlayerO == nil {
+		return RematchNoop, ErrPlayerOMissing
+	}
+
+	switch player {
+	case MarkX:
+		if g.RematchXRequested {
+			return RematchNoop, nil
+		}
+		g.RematchXRequested = true
+	case MarkO:
+		if g.RematchORequested {
+			return RematchNoop, nil
+		}
+		g.RematchORequested = true
+	}
+
+	g.Version++
+
+	if !g.RematchXRequested || !g.RematchORequested {
+		return RematchRequested, nil
+	}
+
+	g.resetRound()
+	return RematchStarted, nil
+}
+
+func (g *Game) recordOutcome() {
+	switch {
+	case g.IsDraw:
+		g.Draws++
+	case g.Winner == MarkX:
+		g.XWins++
+	case g.Winner == MarkO:
+		g.OWins++
+	}
+}
+
+func (g *Game) resetRound() {
+	for i := range g.Board {
+		g.Board[i] = MarkEmpty
+	}
+
+	g.Status = StatusInProgress
+	g.NextTurn = MarkX // [TODO] x or o? how to determine? people won last round?
+	g.Winner = MarkEmpty
+	g.IsDraw = false
+	g.MoveNumber = 0
+	g.RoundNumber++
+	g.RematchXRequested = false
+	g.RematchORequested = false
 }
 
 // returns MarkX or MarkO if there is a winner, otherwise MarkEmpty

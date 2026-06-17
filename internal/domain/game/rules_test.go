@@ -14,6 +14,9 @@ func TestNewGame_InitialState(t *testing.T) {
 	if g.Version != 1 {
 		t.Fatalf("expected Version 1, got %d", g.Version)
 	}
+	if g.RoundNumber != 1 {
+		t.Fatalf("expected RoundNumber 1, got %d", g.RoundNumber)
+	}
 	for i, c := range g.Board {
 		if c != MarkEmpty {
 			t.Fatalf("expected board[%d] empty, got %v", i, c)
@@ -152,6 +155,9 @@ func TestApplyMove_XWinsTopRow(t *testing.T) {
 	if g.IsDraw {
 		t.Fatalf("expected IsDraw false")
 	}
+	if g.XWins != 1 || g.OWins != 0 || g.Draws != 0 {
+		t.Fatalf("unexpected score X=%d O=%d D=%d", g.XWins, g.OWins, g.Draws)
+	}
 }
 
 func TestApplyMove_Draw(t *testing.T) {
@@ -193,6 +199,9 @@ func TestApplyMove_Draw(t *testing.T) {
 	if g.Winner != MarkEmpty {
 		t.Fatalf("expected Winner empty on draw, got %v", g.Winner)
 	}
+	if g.XWins != 0 || g.OWins != 0 || g.Draws != 1 {
+		t.Fatalf("unexpected score X=%d O=%d D=%d", g.XWins, g.OWins, g.Draws)
+	}
 }
 
 func TestApplyMove_NoMovesAfterFinished(t *testing.T) {
@@ -213,5 +222,88 @@ func TestApplyMove_NoMovesAfterFinished(t *testing.T) {
 
 	if err := g.ApplyMove(MarkO, 8); err != ErrGameFinished {
 		t.Fatalf("expected ErrGameFinished, got %v", err)
+	}
+}
+
+func TestRequestRematch_WaitsForBothPlayersThenResetsRound(t *testing.T) {
+	g := NewGame("g1", "CODE")
+	g.SetPlayerO("p2", "bob")
+	_ = g.Start()
+
+	_ = g.ApplyMove(MarkX, 0)
+	_ = g.ApplyMove(MarkO, 3)
+	_ = g.ApplyMove(MarkX, 1)
+	_ = g.ApplyMove(MarkO, 4)
+	_ = g.ApplyMove(MarkX, 2)
+
+	finishedVersion := g.Version
+
+	result, err := g.RequestRematch(MarkX)
+	if err != nil {
+		t.Fatalf("RequestRematch X error: %v", err)
+	}
+	if result != RematchRequested {
+		t.Fatalf("expected RematchRequested, got %v", result)
+	}
+	if !g.RematchXRequested || g.RematchORequested {
+		t.Fatalf("unexpected rematch flags X=%v O=%v", g.RematchXRequested, g.RematchORequested)
+	}
+	if g.Status != StatusFinished {
+		t.Fatalf("expected finished while waiting for O, got %v", g.Status)
+	}
+	if g.Version != finishedVersion+1 {
+		t.Fatalf("expected version %d, got %d", finishedVersion+1, g.Version)
+	}
+
+	result, err = g.RequestRematch(MarkX)
+	if err != nil {
+		t.Fatalf("duplicate RequestRematch X error: %v", err)
+	}
+	if result != RematchNoop {
+		t.Fatalf("expected duplicate RematchNoop, got %v", result)
+	}
+	if g.Version != finishedVersion+1 {
+		t.Fatalf("duplicate rematch should not bump version, got %d", g.Version)
+	}
+
+	result, err = g.RequestRematch(MarkO)
+	if err != nil {
+		t.Fatalf("RequestRematch O error: %v", err)
+	}
+	if result != RematchStarted {
+		t.Fatalf("expected RematchStarted, got %v", result)
+	}
+	if g.Status != StatusInProgress {
+		t.Fatalf("expected in progress after both rematch, got %v", g.Status)
+	}
+	if g.RoundNumber != 2 {
+		t.Fatalf("expected round 2, got %d", g.RoundNumber)
+	}
+	if g.XWins != 1 || g.OWins != 0 || g.Draws != 0 {
+		t.Fatalf("score should persist, got X=%d O=%d D=%d", g.XWins, g.OWins, g.Draws)
+	}
+	if g.RematchXRequested || g.RematchORequested {
+		t.Fatalf("expected rematch flags reset, got X=%v O=%v", g.RematchXRequested, g.RematchORequested)
+	}
+	if g.MoveNumber != 0 {
+		t.Fatalf("expected move number reset, got %d", g.MoveNumber)
+	}
+	if g.NextTurn != MarkX {
+		t.Fatalf("expected X to start next round, got %v", g.NextTurn)
+	}
+	for index, cell := range g.Board {
+		if cell != MarkEmpty {
+			t.Fatalf("expected board[%d] reset empty, got %v", index, cell)
+		}
+	}
+}
+
+func TestRequestRematch_RequiresFinishedGame(t *testing.T) {
+	g := NewGame("g1", "CODE")
+	g.SetPlayerO("p2", "bob")
+	_ = g.Start()
+
+	if _, err := g.RequestRematch(MarkX); err != ErrGameNotFinished {
+		t.Fatalf("expected ErrGameNotFinished, got %v", err)
 	}
 }

@@ -7,6 +7,7 @@ type Player struct {
 }
 
 type Mark int
+
 const (
 	MarkUnspecified Mark = iota
 	MarkEmpty
@@ -15,6 +16,7 @@ const (
 )
 
 type GameStatus int
+
 const (
 	StatusUnspecified GameStatus = iota
 	StatusWaiting
@@ -24,15 +26,21 @@ const (
 )
 
 type Game struct {
-	ID       string
-	JoinCode string
-	Status   GameStatus
-	Board [9]Mark
-	NextTurn Mark
-	Winner Mark
-	IsDraw bool
-	MoveNumber int64
-	Version    int64
-	PlayerX *Player
-	PlayerO *Player
+	ID                string
+	JoinCode          string
+	Status            GameStatus
+	Board             [9]Mark
+	NextTurn          Mark
+	Winner            Mark
+	IsDraw            bool
+	MoveNumber        int64
+	Version           int64
+	PlayerX           *Player
+	PlayerO           *Player
+	XWins             int64
+	OWins             int64
+	Draws             int64
+	RoundNumber       int64
+	RematchXRequested bool
+	RematchORequested bool
 }

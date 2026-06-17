@@ -3,11 +3,12 @@ package game
 import "errors"
 
 var (
-	ErrInvalidCellIndex = errors.New("invalid cell index")
-	ErrCellOccupied = errors.New("cell already occupied")
+	ErrInvalidCellIndex  = errors.New("invalid cell index")
+	ErrCellOccupied      = errors.New("cell already occupied")
 	ErrGameNotInProgress = errors.New("game is not in progress")
-	ErrGameFinished = errors.New("game already finished")
+	ErrGameFinished      = errors.New("game already finished")
 	ErrInvalidPlayerMark = errors.New("invalid player mark")
-	ErrNotPlayersTurn = errors.New("not player's turn")
-	ErrPlayerOMissing = errors.New("player O is missing")
+	ErrNotPlayersTurn    = errors.New("not player's turn")
+	ErrPlayerOMissing    = errors.New("player O is missing")
+	ErrGameNotFinished   = errors.New("game is not finished")
 )
