@@ -55,6 +55,17 @@ func (h *GameHandler) MakeMove(ctx context.Context, req *xov1.MakeMoveRequest) (
 	}, nil
 }
 
+func (h *GameHandler) RequestRematch(ctx context.Context, req *xov1.RequestRematchRequest) (*xov1.RequestRematchResponse, error) {
+	result, err := h.service.RequestRematch(req.GetGameId(), req.GetPlayerToken())
+	if err != nil {
+		return nil, gameError(err)
+	}
+
+	return &xov1.RequestRematchResponse{
+		State: toProtoGameState(result.Game),
+	}, nil
+}
+
 func (h *GameHandler) WatchGame(req *xov1.WatchGameRequest, stream xov1.GameService_WatchGameServer) error {
 	if h.hub == nil {
 		return status.Error(codes.Internal, "realtime hub is not configured")
@@ -136,6 +147,12 @@ func gameError(err error) error {
 
 	case errors.Is(err, domaingame.ErrGameFinished):
 		return status.Error(codes.FailedPrecondition, err.Error())
+
+	case errors.Is(err, domaingame.ErrGameNotFinished):
+		return status.Error(codes.FailedPrecondition, err.Error())
+
+	case errors.Is(err, domaingame.ErrInvalidPlayerMark):
+		return status.Error(codes.InvalidArgument, err.Error())
 
 	default:
 		return status.Error(codes.Internal, err.Error())

@@ -29,6 +29,16 @@ func toProtoGameState(g *domaingame.Game) *xov1.GameState {
 		Winner:   toProtoMark(g.Winner),
 		IsDraw:   g.IsDraw,
 		Version:  g.Version,
+		Score: &xov1.MatchScore{
+			XWins: g.XWins,
+			OWins: g.OWins,
+			Draws: g.Draws,
+		},
+		Rematch: &xov1.RematchState{
+			XRequested: g.RematchXRequested,
+			ORequested: g.RematchORequested,
+		},
+		RoundNumber: g.RoundNumber,
 	}
 }
 
@@ -80,6 +90,10 @@ func toProtoEventType(t realtime.EventType) xov1.GameEventType {
 		return xov1.GameEventType_GAME_EVENT_TYPE_MOVE_MADE
 	case realtime.EventTypeGameOver:
 		return xov1.GameEventType_GAME_EVENT_TYPE_GAME_OVER
+	case realtime.EventTypeRematchRequested:
+		return xov1.GameEventType_GAME_EVENT_TYPE_REMATCH_REQUESTED
+	case realtime.EventTypeRoundStarted:
+		return xov1.GameEventType_GAME_EVENT_TYPE_ROUND_STARTED
 	default:
 		return xov1.GameEventType_GAME_EVENT_TYPE_UNSPECIFIED
 	}

@@ -263,4 +263,65 @@ func TestWatchGameReceivesGameOverEvent(t *testing.T) {
 	if lastEvent.GetState().GetStatus() != xov1.GameStatus_GAME_STATUS_FINISHED {
 		t.Fatalf("expected finished status, got %v", lastEvent.GetState().GetStatus())
 	}
+	if lastEvent.GetState().GetScore().GetXWins() != 1 {
+		t.Fatalf("expected X score 1, got %d", lastEvent.GetState().GetScore().GetXWins())
+	}
+	if lastEvent.GetState().GetRoundNumber() != 1 {
+		t.Fatalf("expected round 1, got %d", lastEvent.GetState().GetRoundNumber())
+	}
+
+	xRematch, err := gameClient.RequestRematch(ctx, &xov1.RequestRematchRequest{
+		GameId:      gameID,
+		PlayerToken: aliceToken,
+	})
+	if err != nil {
+		t.Fatalf("RequestRematch X: %v", err)
+	}
+	if !xRematch.GetState().GetRematch().GetXRequested() {
+		t.Fatalf("expected X rematch request")
+	}
+	if xRematch.GetState().GetStatus() != xov1.GameStatus_GAME_STATUS_FINISHED {
+		t.Fatalf("expected game to remain finished until O requests rematch")
+	}
+
+	rematchRequestedEvent, err := stream.Recv()
+	if err != nil {
+		t.Fatalf("rematch requested recv: %v", err)
+	}
+	if rematchRequestedEvent.GetType() != xov1.GameEventType_GAME_EVENT_TYPE_REMATCH_REQUESTED {
+		t.Fatalf("expected REMATCH_REQUESTED event, got %v", rematchRequestedEvent.GetType())
+	}
+
+	oRematch, err := gameClient.RequestRematch(ctx, &xov1.RequestRematchRequest{
+		GameId:      gameID,
+		PlayerToken: bobToken,
+	})
+	if err != nil {
+		t.Fatalf("RequestRematch O: %v", err)
+	}
+	if oRematch.GetState().GetStatus() != xov1.GameStatus_GAME_STATUS_IN_PROGRESS {
+		t.Fatalf("expected next round in progress, got %v", oRematch.GetState().GetStatus())
+	}
+	if oRematch.GetState().GetRoundNumber() != 2 {
+		t.Fatalf("expected round 2, got %d", oRematch.GetState().GetRoundNumber())
+	}
+	if oRematch.GetState().GetScore().GetXWins() != 1 || oRematch.GetState().GetScore().GetDraws() != 0 {
+		t.Fatalf("unexpected score after rematch: %+v", oRematch.GetState().GetScore())
+	}
+	for index, mark := range oRematch.GetState().GetBoard() {
+		if mark != xov1.Mark_MARK_EMPTY {
+			t.Fatalf("expected board[%d] empty after rematch, got %v", index, mark)
+		}
+	}
+
+	roundStartedEvent, err := stream.Recv()
+	if err != nil {
+		t.Fatalf("round started recv: %v", err)
+	}
+	if roundStartedEvent.GetType() != xov1.GameEventType_GAME_EVENT_TYPE_ROUND_STARTED {
+		t.Fatalf("expected ROUND_STARTED event, got %v", roundStartedEvent.GetType())
+	}
+	if roundStartedEvent.GetState().GetRoundNumber() != 2 {
+		t.Fatalf("expected streamed round 2, got %d", roundStartedEvent.GetState().GetRoundNumber())
+	}
 }
