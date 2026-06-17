@@ -6,6 +6,7 @@ A multiplayer Tic-Tac-Toe backend built with Go, gRPC, Protocol Buffers, Postgre
 
 - Create and join games
 - Turn-based gameplay with validation
+- Rematch rounds with room-level score and draw tracking
 - Real-time game updates using gRPC server-side streaming
 - PostgreSQL persistence
 - Session-based player authentication
@@ -219,6 +220,7 @@ JoinGame
 ```text
 GetState
 MakeMove
+RequestRematch
 WatchGame
 ```
 
