@@ -121,4 +121,43 @@ func TestGameRepository_CreateGetAndUpdate(t *testing.T) {
 	if updated.Version != latest.Version {
 		t.Fatalf("expected version %d, got %d", latest.Version, updated.Version)
 	}
+
+	latest = updated
+	if err := latest.ApplyMove(domaingame.MarkO, 0); err != nil {
+		t.Fatalf("ApplyMove O: %v", err)
+	}
+	if err := latest.ApplyMove(domaingame.MarkX, 3); err != nil {
+		t.Fatalf("ApplyMove X: %v", err)
+	}
+	if err := latest.ApplyMove(domaingame.MarkO, 1); err != nil {
+		t.Fatalf("ApplyMove O: %v", err)
+	}
+	if err := latest.ApplyMove(domaingame.MarkX, 5); err != nil {
+		t.Fatalf("ApplyMove winning X: %v", err)
+	}
+	if latest.Status != domaingame.StatusFinished || latest.XWins != 1 {
+		t.Fatalf("expected finished game with X score 1, got status=%v X=%d", latest.Status, latest.XWins)
+	}
+	if _, err := latest.RequestRematch(domaingame.MarkX); err != nil {
+		t.Fatalf("RequestRematch X: %v", err)
+	}
+
+	if err := repo.Update(latest); err != nil {
+		t.Fatalf("Update after rematch request: %v", err)
+	}
+
+	updated, err = repo.GetByID("game1")
+	if err != nil {
+		t.Fatalf("GetByID after rematch request: %v", err)
+	}
+
+	if updated.XWins != 1 || updated.OWins != 0 || updated.Draws != 0 {
+		t.Fatalf("unexpected persisted score X=%d O=%d D=%d", updated.XWins, updated.OWins, updated.Draws)
+	}
+	if !updated.RematchXRequested || updated.RematchORequested {
+		t.Fatalf("unexpected persisted rematch flags X=%v O=%v", updated.RematchXRequested, updated.RematchORequested)
+	}
+	if updated.RoundNumber != 1 {
+		t.Fatalf("expected round 1 before restart, got %d", updated.RoundNumber)
+	}
 }

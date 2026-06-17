@@ -40,9 +40,10 @@ func (r *GameRepository) Create(g *domaingame.Game) error {
 	_, err = tx.Exec(ctx, `
 		INSERT INTO games (
 			id, join_code, status, board, next_turn, winner,
-			is_draw, move_number, version
+			is_draw, move_number, version, x_wins, o_wins, draws,
+			round_number, rematch_x_requested, rematch_o_requested
 		)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
 	`,
 		g.ID,
 		g.JoinCode,
@@ -53,6 +54,12 @@ func (r *GameRepository) Create(g *domaingame.Game) error {
 		g.IsDraw,
 		g.MoveNumber,
 		g.Version,
+		g.XWins,
+		g.OWins,
+		g.Draws,
+		g.RoundNumber,
+		g.RematchXRequested,
+		g.RematchORequested,
 	)
 	if err != nil {
 		return fmt.Errorf("insert game: %w", err)
@@ -110,8 +117,14 @@ func (r *GameRepository) Update(g *domaingame.Game) error {
 			is_draw = $6,
 			move_number = $7,
 			version = $8,
+			x_wins = $9,
+			o_wins = $10,
+			draws = $11,
+			round_number = $12,
+			rematch_x_requested = $13,
+			rematch_o_requested = $14,
 			updated_at = NOW()
-		WHERE id = $1 AND version = $9
+		WHERE id = $1 AND version = $15
 	`,
 		g.ID,
 		statusToString(g.Status),
@@ -121,6 +134,12 @@ func (r *GameRepository) Update(g *domaingame.Game) error {
 		g.IsDraw,
 		g.MoveNumber,
 		g.Version,
+		g.XWins,
+		g.OWins,
+		g.Draws,
+		g.RoundNumber,
+		g.RematchXRequested,
+		g.RematchORequested,
 		expectedVersion,
 	)
 	if err != nil {
@@ -155,21 +174,28 @@ func (r *GameRepository) getByColumn(column string, value string) (*domaingame.G
 
 	query := fmt.Sprintf(`
 		SELECT id, join_code, status, board, next_turn, winner,
-		       is_draw, move_number, version
+		       is_draw, move_number, version, x_wins, o_wins, draws,
+		       round_number, rematch_x_requested, rematch_o_requested
 		FROM games
 		WHERE %s = $1
 	`, column)
 
 	var (
-		id         string
-		joinCode   string
-		status     string
-		boardData  []byte
-		nextTurn   string
-		winner     string
-		isDraw     bool
-		moveNumber int64
-		version    int64
+		id                string
+		joinCode          string
+		status            string
+		boardData         []byte
+		nextTurn          string
+		winner            string
+		isDraw            bool
+		moveNumber        int64
+		version           int64
+		xWins             int64
+		oWins             int64
+		draws             int64
+		roundNumber       int64
+		rematchXRequested bool
+		rematchORequested bool
 	)
 
 	err := r.pool.QueryRow(ctx, query, value).Scan(
@@ -182,6 +208,12 @@ func (r *GameRepository) getByColumn(column string, value string) (*domaingame.G
 		&isDraw,
 		&moveNumber,
 		&version,
+		&xWins,
+		&oWins,
+		&draws,
+		&roundNumber,
+		&rematchXRequested,
+		&rematchORequested,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -196,15 +228,21 @@ func (r *GameRepository) getByColumn(column string, value string) (*domaingame.G
 	}
 
 	g := &domaingame.Game{
-		ID:         id,
-		JoinCode:   joinCode,
-		Board:      board,
-		Status:     stringToStatus(status),
-		NextTurn:   stringToMark(nextTurn),
-		Winner:     stringToMark(winner),
-		IsDraw:     isDraw,
-		MoveNumber: moveNumber,
-		Version:    version,
+		ID:                id,
+		JoinCode:          joinCode,
+		Board:             board,
+		Status:            stringToStatus(status),
+		NextTurn:          stringToMark(nextTurn),
+		Winner:            stringToMark(winner),
+		IsDraw:            isDraw,
+		MoveNumber:        moveNumber,
+		Version:           version,
+		XWins:             xWins,
+		OWins:             oWins,
+		Draws:             draws,
+		RoundNumber:       roundNumber,
+		RematchXRequested: rematchXRequested,
+		RematchORequested: rematchORequested,
 	}
 
 	players, err := r.playersByGameID(ctx, id)
