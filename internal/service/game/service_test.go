@@ -102,3 +102,72 @@ func TestMakeMove_OMovesAfterX(t *testing.T) {
 		t.Fatalf("expected next turn X, got %v", result.Game.NextTurn)
 	}
 }
+
+func TestRequestRematch_RequiresBothPlayersAndKeepsScore(t *testing.T) {
+	gameSvc, created, joined := setupStartedGame(t)
+
+	moves := []struct {
+		token string
+		cell  int
+	}{
+		{created.PlayerToken, 0},
+		{joined.PlayerToken, 3},
+		{created.PlayerToken, 1},
+		{joined.PlayerToken, 4},
+		{created.PlayerToken, 2},
+	}
+
+	for _, move := range moves {
+		if _, err := gameSvc.MakeMove(created.Game.ID, move.token, move.cell); err != nil {
+			t.Fatalf("MakeMove: %v", err)
+		}
+	}
+
+	xRequested, err := gameSvc.RequestRematch(created.Game.ID, created.PlayerToken)
+	if err != nil {
+		t.Fatalf("RequestRematch X: %v", err)
+	}
+	if xRequested.Started {
+		t.Fatalf("expected first rematch request to wait for opponent")
+	}
+	if !xRequested.Changed {
+		t.Fatalf("expected first rematch request to change state")
+	}
+	if !xRequested.Game.RematchXRequested || xRequested.Game.RematchORequested {
+		t.Fatalf("unexpected rematch flags X=%v O=%v", xRequested.Game.RematchXRequested, xRequested.Game.RematchORequested)
+	}
+
+	duplicate, err := gameSvc.RequestRematch(created.Game.ID, created.PlayerToken)
+	if err != nil {
+		t.Fatalf("duplicate RequestRematch X: %v", err)
+	}
+	if duplicate.Changed {
+		t.Fatalf("duplicate rematch request should be idempotent")
+	}
+
+	started, err := gameSvc.RequestRematch(created.Game.ID, joined.PlayerToken)
+	if err != nil {
+		t.Fatalf("RequestRematch O: %v", err)
+	}
+	if !started.Started {
+		t.Fatalf("expected second rematch request to start next round")
+	}
+	if started.Game.Status != domaingame.StatusInProgress {
+		t.Fatalf("expected in progress, got %v", started.Game.Status)
+	}
+	if started.Game.RoundNumber != 2 {
+		t.Fatalf("expected round 2, got %d", started.Game.RoundNumber)
+	}
+	if started.Game.XWins != 1 || started.Game.OWins != 0 || started.Game.Draws != 0 {
+		t.Fatalf("unexpected score X=%d O=%d D=%d", started.Game.XWins, started.Game.OWins, started.Game.Draws)
+	}
+}
+
+func TestRequestRematch_RejectsBeforeGameFinished(t *testing.T) {
+	gameSvc, created, _ := setupStartedGame(t)
+
+	_, err := gameSvc.RequestRematch(created.Game.ID, created.PlayerToken)
+	if err != domaingame.ErrGameNotFinished {
+		t.Fatalf("expected ErrGameNotFinished, got %v", err)
+	}
+}

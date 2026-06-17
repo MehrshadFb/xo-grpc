@@ -9,3 +9,9 @@ type GetStateResult struct {
 type MakeMoveResult struct {
 	Game *domaingame.Game
 }
+
+type RequestRematchResult struct {
+	Game    *domaingame.Game
+	Started bool
+	Changed bool
+}

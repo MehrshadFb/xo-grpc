@@ -9,6 +9,8 @@ const (
 	EventTypePlayerJoined
 	EventTypeMoveMade
 	EventTypeGameOver
+	EventTypeRematchRequested
+	EventTypeRoundStarted
 )
 
 type Event struct {

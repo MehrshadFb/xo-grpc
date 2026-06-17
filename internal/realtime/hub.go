@@ -48,7 +48,7 @@ func (h *Hub) Unsubscribe(gameID string, sub Subscriber) {
 	}
 
 	delete(subs, sub) // remove the subscriber from the subscribers map
-	close(sub) // close the channel to notify the subscriber that it is no longer needed
+	close(sub)        // close the channel to notify the subscriber that it is no longer needed
 
 	if len(subs) == 0 {
 		delete(h.subscribers, gameID) // remove gameID from subscribers map when no subscribers are left
