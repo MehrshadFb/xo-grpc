@@ -122,19 +122,27 @@ func TestGameRepository_CreateGetAndUpdate(t *testing.T) {
 		t.Fatalf("expected version %d, got %d", latest.Version, updated.Version)
 	}
 
-	latest = updated
-	if err := latest.ApplyMove(domaingame.MarkO, 0); err != nil {
-		t.Fatalf("ApplyMove O: %v", err)
+	applyAndPersistMove := func(mark domaingame.Mark, cell int) *domaingame.Game {
+		t.Helper()
+
+		game, err := repo.GetByID("game1")
+		if err != nil {
+			t.Fatalf("GetByID before move: %v", err)
+		}
+		if err := game.ApplyMove(mark, cell); err != nil {
+			t.Fatalf("ApplyMove %v at %d: %v", mark, cell, err)
+		}
+		if err := repo.Update(game); err != nil {
+			t.Fatalf("Update after move %v at %d: %v", mark, cell, err)
+		}
+
+		return game
 	}
-	if err := latest.ApplyMove(domaingame.MarkX, 3); err != nil {
-		t.Fatalf("ApplyMove X: %v", err)
-	}
-	if err := latest.ApplyMove(domaingame.MarkO, 1); err != nil {
-		t.Fatalf("ApplyMove O: %v", err)
-	}
-	if err := latest.ApplyMove(domaingame.MarkX, 5); err != nil {
-		t.Fatalf("ApplyMove winning X: %v", err)
-	}
+
+	applyAndPersistMove(domaingame.MarkO, 0)
+	applyAndPersistMove(domaingame.MarkX, 3)
+	applyAndPersistMove(domaingame.MarkO, 1)
+	latest = applyAndPersistMove(domaingame.MarkX, 5)
 	if latest.Status != domaingame.StatusFinished || latest.XWins != 1 {
 		t.Fatalf("expected finished game with X score 1, got status=%v X=%d", latest.Status, latest.XWins)
 	}
