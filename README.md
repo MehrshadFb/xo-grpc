@@ -85,6 +85,21 @@ test/e2e
 
 ---
 
+## Documentation
+
+Detailed learning notes are available in [`docs/`](./docs):
+
+- [Architecture](./docs/01-architecture.md)
+- [gRPC API Contract](./docs/02-grpc-api-contract.md)
+- [Domain Model and Game Rules](./docs/03-domain-model-and-game-rules.md)
+- [Service Layer Workflows](./docs/04-service-layer-workflows.md)
+- [Persistence and Migrations](./docs/05-persistence-and-migrations.md)
+- [Realtime Streaming](./docs/06-realtime-streaming.md)
+- [Operations and Deployment](./docs/07-operations-and-deployment.md)
+- [Testing and CI](./docs/08-testing-and-ci.md)
+
+---
+
 ## Technologies
 
 - Go
