@@ -1,6 +1,7 @@
 package lobby
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/MehrshadFb/xo-grpc/internal/domain/game"
@@ -28,8 +29,8 @@ func TestCreateGame(t *testing.T) {
 		t.Fatalf("expected PlayerX to be set")
 	}
 
-	if result.Game.PlayerX.DisplayName != "Alice" {
-		t.Fatalf("expected display name Alice, got %q", result.Game.PlayerX.DisplayName)
+	if result.Game.PlayerX.DisplayName != "ALICE" {
+		t.Fatalf("expected display name ALICE, got %q", result.Game.PlayerX.DisplayName)
 	}
 
 	if result.PlayerToken == "" {
@@ -77,8 +78,8 @@ func TestJoinGame(t *testing.T) {
 	if joined.Game.PlayerO == nil {
 		t.Fatalf("expected PlayerO to be set")
 	}
-	if joined.Game.PlayerO.DisplayName != "Bob" {
-		t.Fatalf("expected PlayerO display name Bob, got %q", joined.Game.PlayerO.DisplayName)
+	if joined.Game.PlayerO.DisplayName != "BOB" {
+		t.Fatalf("expected PlayerO display name BOB, got %q", joined.Game.PlayerO.DisplayName)
 	}
 	if joined.Game.Status != game.StatusInProgress {
 		t.Fatalf("expected game status in progress, got %v", joined.Game.Status)
@@ -96,6 +97,26 @@ func TestJoinGame(t *testing.T) {
 	}
 	if sess.Mark != game.MarkO {
 		t.Fatalf("expected joined player mark O, got %v", sess.Mark)
+	}
+}
+
+func TestJoinGame_LowercaseJoinCode(t *testing.T) {
+	store := memory.NewStore()
+	sessionRepo := memory.NewSessionRepository()
+	sessions := session.NewManager(sessionRepo)
+	service := NewService(store, sessions, nil)
+
+	created, err := service.CreateGame("Alice")
+	if err != nil {
+		t.Fatalf("CreateGame error: %v", err)
+	}
+
+	joined, err := service.JoinGame("  "+strings.ToLower(created.Game.JoinCode)+" ", "Bob")
+	if err != nil {
+		t.Fatalf("JoinGame with lowercase code error: %v", err)
+	}
+	if joined.Game.ID != created.Game.ID {
+		t.Fatalf("joined wrong game: expected %s, got %s", created.Game.ID, joined.Game.ID)
 	}
 }
 

@@ -25,7 +25,7 @@ func NewService(games repository.GameRepository, sessions *session.Manager, hub 
 }
 
 func (s *Service) CreateGame(displayName string) (*CreateGameResult, error) {
-	displayName = strings.TrimSpace(displayName)
+	displayName = strings.ToUpper(strings.TrimSpace(displayName))
 	if displayName == "" {
 		return nil, ErrEmptyDisplayName
 	}
@@ -71,8 +71,8 @@ func (s *Service) CreateGame(displayName string) (*CreateGameResult, error) {
 }
 
 func (s *Service) JoinGame(joinCode, displayName string) (*JoinGameResult, error) {
-	joinCode = strings.TrimSpace(joinCode)
-	displayName = strings.TrimSpace(displayName)
+	joinCode = strings.ToUpper(strings.TrimSpace(joinCode))
+	displayName = strings.ToUpper(strings.TrimSpace(displayName))
 
 	if displayName == "" {
 		return nil, ErrEmptyDisplayName

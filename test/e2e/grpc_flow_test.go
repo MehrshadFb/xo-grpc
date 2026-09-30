@@ -127,7 +127,7 @@ func TestCreateJoinMoveAndWatchGame(t *testing.T) {
 	if playerJoinedEvent.GetType() != xov1.GameEventType_GAME_EVENT_TYPE_PLAYER_JOINED {
 		t.Fatalf("expected player joined event, got %v", playerJoinedEvent.GetType())
 	}
-	if playerJoinedEvent.GetState().GetPlayerO().GetDisplayName() != "Bob" {
+	if playerJoinedEvent.GetState().GetPlayerO().GetDisplayName() != "BOB" {
 		t.Fatalf("expected PlayerO Bob, got %q", playerJoinedEvent.GetState().GetPlayerO().GetDisplayName())
 	}
 	if playerJoinedEvent.GetState().GetStatus() != xov1.GameStatus_GAME_STATUS_IN_PROGRESS {
