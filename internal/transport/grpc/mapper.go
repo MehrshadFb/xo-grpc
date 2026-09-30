@@ -94,6 +94,10 @@ func toProtoEventType(t realtime.EventType) xov1.GameEventType {
 		return xov1.GameEventType_GAME_EVENT_TYPE_REMATCH_REQUESTED
 	case realtime.EventTypeRoundStarted:
 		return xov1.GameEventType_GAME_EVENT_TYPE_ROUND_STARTED
+	case realtime.EventTypePlayerLeft:
+		return xov1.GameEventType_GAME_EVENT_TYPE_PLAYER_LEFT
+	case realtime.EventTypePlayerReturned:
+		return xov1.GameEventType_GAME_EVENT_TYPE_PLAYER_RETURNED
 	default:
 		return xov1.GameEventType_GAME_EVENT_TYPE_UNSPECIFIED
 	}
@@ -108,4 +112,11 @@ func toProtoGameOverReason(reason string) xov1.GameOverReason {
 	default:
 		return xov1.GameOverReason_GAME_OVER_REASON_UNSPECIFIED
 	}
+}
+
+func toProtoPlayerMark(mark domaingame.Mark) xov1.Mark {
+	if mark != domaingame.MarkX && mark != domaingame.MarkO {
+		return xov1.Mark_MARK_UNSPECIFIED
+	}
+	return toProtoMark(mark)
 }

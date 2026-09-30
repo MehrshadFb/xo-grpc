@@ -11,12 +11,15 @@ const (
 	EventTypeGameOver
 	EventTypeRematchRequested
 	EventTypeRoundStarted
+	EventTypePlayerLeft
+	EventTypePlayerReturned
 )
 
 type Event struct {
 	Type           EventType
 	Game           *domaingame.Game
 	GameOverReason string
+	PlayerMark     domaingame.Mark
 }
 
 type Subscriber chan Event

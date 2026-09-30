@@ -111,7 +111,8 @@ func (s *Service) GetState(gameID, playerToken string) (*GetStateResult, error) 
 		return nil, ErrInvalidToken
 	}
 
-	if _, err := s.sessions.ValidateGame(playerToken, gameID); err != nil {
+	sess, err := s.sessions.ValidateGame(playerToken, gameID)
+	if err != nil {
 		return nil, err
 	}
 
@@ -120,7 +121,7 @@ func (s *Service) GetState(gameID, playerToken string) (*GetStateResult, error) 
 		return nil, err
 	}
 
-	return &GetStateResult{Game: g}, nil
+	return &GetStateResult{Game: g, Mark: sess.Mark}, nil
 }
 
 func (s *Service) MakeMove(gameID, playerToken string, cellIndex int) (*MakeMoveResult, error) {

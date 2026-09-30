@@ -69,7 +69,8 @@ func main() {
 
 	// gRPC handlers
 	lobbyHandler := transportgrpc.NewLobbyHandler(lobbyService)
-	gameHandler := transportgrpc.NewGameHandler(gameService, hub)
+	presence := realtime.NewPresence(hub, 10*time.Second, gameRepo.GetByID)
+	gameHandler := transportgrpc.NewGameHandler(gameService, hub, presence)
 	healthHandler := transportgrpc.NewHealthHandler(healthService)
 
 	// gRPC server

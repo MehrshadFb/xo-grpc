@@ -46,9 +46,10 @@ enum GameEventType {
   GAME_EVENT_TYPE_PLAYER_JOINED = 2;
   GAME_EVENT_TYPE_MOVE_MADE = 3;
   GAME_EVENT_TYPE_GAME_OVER = 4;
-  GAME_EVENT_TYPE_PLAYER_LEFT = 5; // due to resign or timeout
+  GAME_EVENT_TYPE_PLAYER_LEFT = 5; // player disconnected and did not return within the grace period
   GAME_EVENT_TYPE_REMATCH_REQUESTED = 6; // rematch requested by a player
   GAME_EVENT_TYPE_ROUND_STARTED = 7; // round started after rematch request
+  GAME_EVENT_TYPE_PLAYER_RETURNED = 8; // player reconnected after PLAYER_LEFT
 }
 
 message GameEvent {
@@ -58,6 +59,7 @@ message GameEvent {
   Move move = 4; // present on MOVE_MADE
   GameOverReason game_over_reason = 5; // present on GAME_OVER
   string message = 6; // human-readable info
+  Mark player_mark = 7; // present on PLAYER_LEFT / PLAYER_RETURNED
 }
 
 message WatchGameRequest {

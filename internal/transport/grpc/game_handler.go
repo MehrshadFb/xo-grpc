@@ -18,14 +18,16 @@ import (
 type GameHandler struct {
 	xov1.UnimplementedGameServiceServer
 
-	service *gamesvc.Service
-	hub     *realtime.Hub
+	service  *gamesvc.Service
+	hub      *realtime.Hub
+	presence *realtime.Presence
 }
 
-func NewGameHandler(service *gamesvc.Service, hub *realtime.Hub) *GameHandler {
+func NewGameHandler(service *gamesvc.Service, hub *realtime.Hub, presence *realtime.Presence) *GameHandler {
 	return &GameHandler{
-		service: service,
-		hub:     hub,
+		service:  service,
+		hub:      hub,
+		presence: presence,
 	}
 }
 
@@ -93,6 +95,28 @@ func (h *GameHandler) WatchGame(req *xov1.WatchGameRequest, stream xov1.GameServ
 	sub := h.hub.Subscribe(req.GetGameId())       // dedicated a private channel for this client to watch this game
 	defer h.hub.Unsubscribe(req.GetGameId(), sub) // unsubscribe when the client disconnects
 
+	if h.presence != nil {
+		h.presence.Connect(req.GetGameId(), result.Mark)
+		defer h.presence.Disconnect(req.GetGameId(), result.Mark) // starts the grace period before PLAYER_LEFT
+
+		// tell a (re)connecting player that their opponent is already away
+		opponent := domaingame.MarkO
+		if result.Mark == domaingame.MarkO {
+			opponent = domaingame.MarkX
+		}
+		if h.presence.IsAway(req.GetGameId(), opponent) {
+			if err := stream.Send(&xov1.GameEvent{
+				Type:       xov1.GameEventType_GAME_EVENT_TYPE_PLAYER_LEFT,
+				EventId:    result.Game.Version,
+				State:      toProtoGameState(result.Game),
+				PlayerMark: toProtoMark(opponent),
+				Message:    "opponent left",
+			}); err != nil {
+				return err
+			}
+		}
+	}
+
 	for {
 		select {
 		case <-stream.Context().Done(): // client context is done = client disconnected
@@ -108,6 +132,7 @@ func (h *GameHandler) WatchGame(req *xov1.WatchGameRequest, stream xov1.GameServ
 				EventId:        event.Game.Version,
 				State:          toProtoGameState(event.Game),
 				GameOverReason: toProtoGameOverReason(event.GameOverReason),
+				PlayerMark:     toProtoPlayerMark(event.PlayerMark),
 				Message:        "game state updated",
 			}); err != nil {
 				return err

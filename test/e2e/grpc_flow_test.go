@@ -19,6 +19,11 @@ import (
 
 func startTestServer(t *testing.T) string {
 	t.Helper()
+	return startTestServerWithPresence(t, 0)
+}
+
+func startTestServerWithPresence(t *testing.T, grace time.Duration) string {
+	t.Helper()
 
 	lis, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -33,10 +38,15 @@ func startTestServer(t *testing.T) string {
 	lobbySvc := lobby.NewService(store, sessions, hub)
 	gameSvc := gamesvc.NewService(store, sessions, hub)
 
+	var presence *realtime.Presence
+	if grace > 0 {
+		presence = realtime.NewPresence(hub, grace, store.GetByID)
+	}
+
 	server := grpc.NewServer()
 
 	xov1.RegisterLobbyServiceServer(server, transportgrpc.NewLobbyHandler(lobbySvc))
-	xov1.RegisterGameServiceServer(server, transportgrpc.NewGameHandler(gameSvc, hub))
+	xov1.RegisterGameServiceServer(server, transportgrpc.NewGameHandler(gameSvc, hub, presence))
 
 	go func() {
 		_ = server.Serve(lis)
