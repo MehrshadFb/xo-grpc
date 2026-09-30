@@ -288,8 +288,8 @@ func TestRequestRematch_WaitsForBothPlayersThenResetsRound(t *testing.T) {
 	if g.MoveNumber != 0 {
 		t.Fatalf("expected move number reset, got %d", g.MoveNumber)
 	}
-	if g.NextTurn != MarkX {
-		t.Fatalf("expected X to start next round, got %v", g.NextTurn)
+	if g.NextTurn != MarkO {
+		t.Fatalf("expected O to start round 2, got %v", g.NextTurn)
 	}
 	for index, cell := range g.Board {
 		if cell != MarkEmpty {
@@ -305,5 +305,40 @@ func TestRequestRematch_RequiresFinishedGame(t *testing.T) {
 
 	if _, err := g.RequestRematch(MarkX); err != ErrGameNotFinished {
 		t.Fatalf("expected ErrGameNotFinished, got %v", err)
+	}
+}
+
+func TestRequestRematch_AlternatesStartingPlayer(t *testing.T) {
+	g := NewGame("g1", "CODE")
+	g.SetPlayerO("p2", "bob")
+	_ = g.Start()
+
+	for round, starter := range []Mark{MarkX, MarkO, MarkX, MarkO} {
+		if g.RoundNumber != int64(round+1) {
+			t.Fatalf("expected round %d, got %d", round+1, g.RoundNumber)
+		}
+		if g.NextTurn != starter {
+			t.Fatalf("round %d: expected %v to start, got %v", g.RoundNumber, starter, g.NextTurn)
+		}
+
+		other := MarkO
+		if starter == MarkO {
+			other = MarkX
+		}
+		for _, move := range []struct {
+			player Mark
+			cell   int
+		}{{starter, 0}, {other, 3}, {starter, 1}, {other, 4}, {starter, 2}} {
+			if err := g.ApplyMove(move.player, move.cell); err != nil {
+				t.Fatalf("round %d: move %v at %d: %v", g.RoundNumber, move.player, move.cell, err)
+			}
+		}
+
+		if _, err := g.RequestRematch(MarkX); err != nil {
+			t.Fatalf("RequestRematch X: %v", err)
+		}
+		if _, err := g.RequestRematch(MarkO); err != nil {
+			t.Fatalf("RequestRematch O: %v", err)
+		}
 	}
 }

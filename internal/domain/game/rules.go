@@ -139,14 +139,22 @@ func (g *Game) resetRound() {
 		g.Board[i] = MarkEmpty
 	}
 
+	g.RoundNumber++
 	g.Status = StatusInProgress
-	g.NextTurn = MarkX // [TODO] x or o? how to determine? people won last round?
+	g.NextTurn = starterForRound(g.RoundNumber)
 	g.Winner = MarkEmpty
 	g.IsDraw = false
 	g.MoveNumber = 0
-	g.RoundNumber++
 	g.RematchXRequested = false
 	g.RematchORequested = false
+}
+
+// each round the starter alternates between X and O
+func starterForRound(round int64) Mark {
+	if round%2 == 0 {
+		return MarkO
+	}
+	return MarkX
 }
 
 // returns MarkX or MarkO if there is a winner, otherwise MarkEmpty
