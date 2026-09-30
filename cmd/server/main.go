@@ -8,12 +8,14 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	xov1 "github.com/MehrshadFb/xo-grpc/gen/go/xo/v1"
 	"github.com/MehrshadFb/xo-grpc/internal/config"
 	"github.com/MehrshadFb/xo-grpc/internal/database"
 	"github.com/MehrshadFb/xo-grpc/internal/metrics"
 	"github.com/MehrshadFb/xo-grpc/internal/realtime"
+	"github.com/MehrshadFb/xo-grpc/internal/service/cleanup"
 	gamesvc "github.com/MehrshadFb/xo-grpc/internal/service/game"
 	healthsvc "github.com/MehrshadFb/xo-grpc/internal/service/health"
 	"github.com/MehrshadFb/xo-grpc/internal/service/lobby"
@@ -59,6 +61,11 @@ func main() {
 	lobbyService := lobby.NewService(gameRepo, sessions, hub)
 	gameService := gamesvc.NewService(gameRepo, sessions, hub)
 	healthService := healthsvc.NewService(dbPool)
+
+	// Cleanup service to delete abandoned games
+	cleanupCtx, stopCleanup := context.WithCancel(ctx)
+	defer stopCleanup()
+	go cleanup.NewService(gameRepo, cleanup.DefaultPolicy).Run(cleanupCtx, time.Hour)
 
 	// gRPC handlers
 	lobbyHandler := transportgrpc.NewLobbyHandler(lobbyService)

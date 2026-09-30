@@ -2,12 +2,17 @@ package postgres
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"os"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/MehrshadFb/xo-grpc/internal/database"
 	domaingame "github.com/MehrshadFb/xo-grpc/internal/domain/game"
 	"github.com/MehrshadFb/xo-grpc/internal/service/session"
+	"github.com/MehrshadFb/xo-grpc/internal/store/memory"
 )
 
 func TestGameRepository_CreateGetAndUpdate(t *testing.T) {
@@ -167,5 +172,86 @@ func TestGameRepository_CreateGetAndUpdate(t *testing.T) {
 	}
 	if updated.RoundNumber != 1 {
 		t.Fatalf("expected round 1 before restart, got %d", updated.RoundNumber)
+	}
+}
+
+func TestGameRepository_DeleteStale(t *testing.T) {
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("DATABASE_URL not set; skipping postgres integration test")
+	}
+
+	ctx := context.Background()
+
+	pool, err := database.NewPostgresPool(ctx, databaseURL)
+	if err != nil {
+		t.Fatalf("connect postgres: %v", err)
+	}
+	defer pool.Close()
+
+	_, err = pool.Exec(ctx, `
+		TRUNCATE TABLE sessions, players, games RESTART IDENTITY CASCADE
+	`)
+	if err != nil {
+		t.Fatalf("truncate tables: %v", err)
+	}
+
+	repo := NewGameRepository(pool)
+
+	games := []struct {
+		id     string
+		status string
+		idle   time.Duration
+	}{
+		{"waiting-old", "WAITING", 2 * time.Hour},
+		{"waiting-new", "WAITING", 10 * time.Minute},
+		{"playing-old", "IN_PROGRESS", 48 * time.Hour},
+		{"playing-new", "IN_PROGRESS", 2 * time.Hour},
+		{"finished-old", "FINISHED", 8 * 24 * time.Hour},
+		{"finished-new", "FINISHED", 2 * 24 * time.Hour},
+	}
+
+	for i, tc := range games {
+		g := domaingame.NewGame(tc.id, fmt.Sprintf("CODE%d", i))
+		g.SetPlayerX("player-"+tc.id, "Alice")
+		if err := repo.Create(g); err != nil {
+			t.Fatalf("create %s: %v", tc.id, err)
+		}
+
+		_, err := pool.Exec(ctx, `
+			UPDATE games SET status = $2, updated_at = NOW() - $3::interval WHERE id = $1
+		`, tc.id, tc.status, fmt.Sprintf("%d seconds", int(tc.idle.Seconds())))
+		if err != nil {
+			t.Fatalf("age %s: %v", tc.id, err)
+		}
+	}
+
+	now := time.Now()
+	deleted, err := repo.DeleteStale(ctx, now.Add(-time.Hour), now.Add(-24*time.Hour), now.Add(-7*24*time.Hour))
+	if err != nil {
+		t.Fatalf("DeleteStale error: %v", err)
+	}
+	if deleted != 3 {
+		t.Fatalf("expected 3 deleted games, got %d", deleted)
+	}
+
+	for _, tc := range games {
+		_, err := repo.GetByID(tc.id)
+		shouldExist := !strings.HasSuffix(tc.id, "-old")
+
+		if shouldExist && err != nil {
+			t.Fatalf("expected %s to remain, got error %v", tc.id, err)
+		}
+		if !shouldExist && !errors.Is(err, memory.ErrGameNotFound) {
+			t.Fatalf("expected %s to be deleted, got error %v", tc.id, err)
+		}
+	}
+
+	var orphanPlayers int
+	if err := pool.QueryRow(ctx, `SELECT COUNT(*) FROM players WHERE game_id LIKE '%-old'`).Scan(&orphanPlayers); err != nil {
+		t.Fatalf("count players: %v", err)
+	}
+	if orphanPlayers != 0 {
+		t.Fatalf("expected players of deleted games to cascade, found %d", orphanPlayers)
 	}
 }

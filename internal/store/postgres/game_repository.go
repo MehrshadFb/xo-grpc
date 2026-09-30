@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	domaingame "github.com/MehrshadFb/xo-grpc/internal/domain/game"
 	"github.com/MehrshadFb/xo-grpc/internal/repository"
@@ -336,4 +337,23 @@ func (r *GameRepository) playersByGameID(ctx context.Context, gameID string) ([]
 	}
 
 	return players, nil
+}
+
+func (r *GameRepository) DeleteStale(
+	ctx context.Context,
+	waitingBefore time.Time,
+	inProgressBefore time.Time,
+	endedBefore time.Time,
+) (int64, error) {
+	result, err := r.pool.Exec(ctx, `
+		DELETE FROM games
+		WHERE (status = 'WAITING' AND updated_at < $1)
+		   OR (status = 'IN_PROGRESS' AND updated_at < $2)
+		   OR (status IN ('FINISHED', 'ABORTED') AND updated_at < $3)
+	`, waitingBefore, inProgressBefore, endedBefore)
+	if err != nil {
+		return 0, fmt.Errorf("delete stale games: %w", err)
+	}
+
+	return result.RowsAffected(), nil
 }
